@@ -16,5 +16,7 @@ namespace Aura.Data
         public DbSet<Justificantes> Justificantes { get; set; }
         public DbSet<Materia> Materias { get; set; }
         public DbSet<Unidad> Unidades { get; set; }
+        public DbSet<Sesion> Sesiones { get; set; }
+        public DbSet<Asistencia> Asistencias { get; set; }
     }
 }
