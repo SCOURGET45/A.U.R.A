@@ -1,0 +1,45 @@
+﻿using System;
+using Aura.Data;
+using Aura.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<AuraDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ConexionAura")));
+
+builder.Services.AddScoped<IAsistenciaService, AsistenciaService>();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Auth/Login";
+        options.AccessDeniedPath = "/Auth/AccesoDenegado";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    });
+
+builder.Services.AddAuthorization();
+
+// Asegúrate de tener esto arriba (antes del builder.Build())
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+// Habilitar archivos estáticos (como el CSS de Bootstrap que pusiste en la vista)
+app.UseStaticFiles();
+app.UseRouting();
+
+// Tus servicios de seguridad
+app.UseAuthentication();
+app.UseAuthorization();
+
+// EL RUTEO PRINCIPAL: Aquí le decimos que empiece en Auth/Login
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Auth}/{action=Login}/{id?}");
+
+app.Run();

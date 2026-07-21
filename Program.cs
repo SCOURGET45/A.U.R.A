@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AuraDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("ConexionAura")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IAsistenciaService, AsistenciaService>();
 
@@ -24,11 +24,22 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+// Asegúrate de tener esto arriba (antes del builder.Build())
+builder.Services.AddControllersWithViews();
+
 var app = builder.Build();
 
+// Habilitar archivos estáticos (como el CSS de Bootstrap que pusiste en la vista)
+app.UseStaticFiles();
+app.UseRouting();
+
+// Tus servicios de seguridad
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => "OK");
+// EL RUTEO PRINCIPAL: Aquí le decimos que empiece en Auth/Login
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Auth}/{action=Login}/{id?}");
 
 app.Run();

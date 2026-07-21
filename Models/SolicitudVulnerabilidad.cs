@@ -1,9 +1,11 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Aura.Models
 {
     public class SolicitudVulnerabilidad
     {
+        [Key] // <--- Esta etiqueta le dice a SQL que esta es la llave primaria
         public int IdSolicitud { get; set; }
 
         public int IdEstudiante { get; set; }
