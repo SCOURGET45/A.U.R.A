@@ -1,0 +1,52 @@
+@model IEnumerable<Aura.Models.MisTutoradosViewModel>
+
+@{
+    ViewData["Title"] = "Mis Tutorados";
+}
+
+<div class="container mt-4">
+    <h2><i class="bi bi-people-fill text-primary"></i> Mis Tutorados</h2>
+    <p class="text-muted">Monitorea el riesgo de deserción e inicia trámites de apoyo.</p>
+    <hr />
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success"><i class="bi bi-check-circle"></i> @TempData["Exito"]</div>
+    }
+
+    <div class="row">
+        @foreach (var alumno in Model)
+        {
+            <div class="col-md-4 mb-3">
+                <div class="card shadow-sm h-100 border-start border-4 @(alumno.TieneSolicitudEnProceso ? "border-warning" : "border-primary")">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold">@alumno.NombreCompleto</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">@alumno.Matricula</h6>
+
+                        <p class="mb-2">
+                            Asistencia Global:
+                            <span class="badge @(alumno.AsistenciaGlobal < 80 ? "bg-danger" : "bg-success")">
+                                @alumno.AsistenciaGlobal%
+                            </span>
+                        </p>
+
+                        @if (alumno.TieneSolicitudEnProceso)
+                        {
+                            <span class="text-warning small fw-bold">
+                                <i class="bi bi-hourglass-split"></i> Trámite en revisión por Dirección
+                            </span>
+                        }
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        @if (!alumno.TieneSolicitudEnProceso)
+                        {
+                            <a asp-action="SolicitarVulnerabilidad" asp-route-idEstudiante="@alumno.IdEstudiante" class="btn btn-sm btn-outline-danger w-100">
+                                <i class="bi bi-life-preserver"></i> Iniciar Trámite de Vulnerabilidad
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

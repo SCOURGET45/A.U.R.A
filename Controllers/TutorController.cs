@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Aura.Data;
 using Aura.Models;
@@ -10,9 +11,8 @@ using Aura.Models;
 namespace Aura.Controllers
 {
     [Authorize(Roles = "Tutor")]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class TutorController : ControllerBase
+    [Route("Tutor")]
+    public class TutorController : Controller
     {
         private readonly AuraDbContext _context;
 
@@ -21,43 +21,73 @@ namespace Aura.Controllers
             _context = context;
         }
 
-        [HttpPost("EmitirJustificante")]
-        public async Task<IActionResult> EmitirJustificante([FromBody] Justificantes model)
+        [HttpGet("MisTutorados")]
+        public async Task<IActionResult> MisTutorados()
         {
-            var cantidadEmitidos = await _context.Justificantes
-                .CountAsync(j => j.IdEstudiante == model.IdEstudiante);
-
-            if (cantidadEmitidos >= 2)
+            var idUsuarioStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(idUsuarioStr))
             {
-                return BadRequest("Bloqueo del sistema: El estudiante ya ha alcanzado el límite de 2 justificantes por cuatrimestre.");
+                return RedirectToAction("Login", "Auth");
             }
 
-            var diasAcumulados = await _context.Justificantes
-                .Where(j => j.IdEstudiante == model.IdEstudiante)
-                .SumAsync(j => j.DiasAmparados);
+            int idTutor = int.Parse(idUsuarioStr);
 
-            if ((diasAcumulados + model.DiasAmparados) > 15)
-            {
-                return BadRequest($"Límite excedido: El alumno tiene {diasAcumulados} días amparados. Un justificante de {model.DiasAmparados} días superaría el máximo de 15 días permitidos.");
-            }
+            var tutorados = await _context.Estudiantes
+                .Where(e => e.Grupo.IdTutor == idTutor)
+                .Select(e => new MisTutoradosViewModel
+                {
+                    IdEstudiante = e.IdEstudiante,
+                    Matricula = e.Matricula,
+                    NombreCompleto = e.Nombre + " " + e.Apellidos,
+                    AsistenciaGlobal = 85.5,
+                    NivelRiesgo = "Medio",
+                    TieneSolicitudEnProceso = _context.SolicitudesVulnerabilidad.Any(s => s.IdEstudiante == e.IdEstudiante && s.Estado == "Pendiente")
+                })
+                .ToListAsync();
 
-            model.FechaEmision = DateTime.Now;
-            _context.Justificantes.Add(model);
-            await _context.SaveChangesAsync();
-
-            return Ok("Justificante emitido exitosamente. La vista del docente se ha actualizado.");
+            return View(tutorados);
         }
 
-        [HttpPost("IniciarVulnerabilidad")]
-        public async Task<IActionResult> IniciarTramiteVulnerabilidad([FromBody] SolicitudVulnerabilidad solicitud)
+        [HttpGet("SolicitarVulnerabilidad/{idEstudiante}")]
+        public async Task<IActionResult> SolicitarVulnerabilidad(int idEstudiante)
         {
-            solicitud.FechaSolicitud = DateTime.Now;
-            solicitud.Dictamen = "Pendiente";
+            var estudiante = await _context.Estudiantes.FindAsync(idEstudiante);
+            if (estudiante == null)
+            {
+                return NotFound();
+            }
 
-            _context.SolicitudesVulnerabilidad.Add(solicitud);
+            var model = new CrearSolicitudViewModel
+            {
+                IdEstudiante = estudiante.IdEstudiante,
+                NombreEstudiante = estudiante.Nombre + " " + estudiante.Apellidos
+            };
+
+            return View(model);
+        }
+
+        [HttpPost("SolicitarVulnerabilidad/{idEstudiante}")]
+        public async Task<IActionResult> SolicitarVulnerabilidad(CrearSolicitudViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var nuevaSolicitud = new SolicitudVulnerabilidad
+            {
+                IdEstudiante = model.IdEstudiante,
+                CategoriaMotivo = model.CategoriaMotivo,
+                JustificacionTutor = model.JustificacionTutor,
+                Estado = "Pendiente",
+                FechaCreacion = DateTime.Now
+            };
+
+            _context.SolicitudesVulnerabilidad.Add(nuevaSolicitud);
             await _context.SaveChangesAsync();
 
-            return Ok("Solicitud enviada directamente a la bandeja del Director.");
+            TempData["Exito"] = $"El caso de {model.NombreEstudiante} fue enviado al Director para su dictamen.";
+            return RedirectToAction(nameof(MisTutorados));
         }
     }
 }

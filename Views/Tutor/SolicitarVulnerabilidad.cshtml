@@ -1,0 +1,49 @@
+@model Aura.Models.CrearSolicitudViewModel
+
+@{
+    ViewData["Title"] = "Solicitud de Vulnerabilidad";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-shield-exclamation"></i> Evaluación de Vulnerabilidad</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Estás iniciando un trámite de excepción académica para <strong>@Model.NombreEstudiante</strong>.</p>
+
+                    <form asp-action="SolicitarVulnerabilidad" method="post">
+                        <input type="hidden" asp-for="IdEstudiante" />
+                        <input type="hidden" asp-for="NombreEstudiante" />
+
+                        <div class="mb-3">
+                            <label asp-for="CategoriaMotivo" class="form-label fw-bold">Categoría de Riesgo</label>
+                            <select asp-for="CategoriaMotivo" class="form-select">
+                                <option value="">Selecciona el motivo principal...</option>
+                                <option value="Problemas de Salud Recurrentes">Problemas de Salud Recurrentes</option>
+                                <option value="Lejanía / Transporte Inestable">Lejanía / Transporte Inestable</option>
+                                <option value="Incompatibilidad Laboral (Horarios)">Incompatibilidad Laboral (Horarios)</option>
+                                <option value="Brecha Tecnológica / Económica">Brecha Tecnológica / Económica</option>
+                            </select>
+                            <span asp-validation-for="CategoriaMotivo" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="JustificacionTutor" class="form-label fw-bold">Dictamen y Análisis del Tutor</label>
+                            <textarea asp-for="JustificacionTutor" class="form-control" rows="4" placeholder="Describe brevemente la situación del estudiante y por qué se solicita la tolerancia en retardos/asistencia..."></textarea>
+                            <div class="form-text">Esta información será leída por el Director para tomar una decisión.</div>
+                            <span asp-validation-for="JustificacionTutor" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="MisTutorados" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-danger"><i class="bi bi-send-fill"></i> Enviar a Dirección</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
