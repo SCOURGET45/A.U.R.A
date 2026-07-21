@@ -9,14 +9,16 @@ namespace Aura.Models
     {
         [Key]
         public int IdSolicitud { get; set; }
+
         public int IdEstudiante { get; set; }
-        public int IdTutor { get; set; }
-        public string Motivo { get; set; }
-        public string Descripcion { get; set; }
-        public DateTime FechaSolicitud { get; set; } = DateTime.Now;
-        public DateTime? FechaJuntaComision { get; set; }
+        public Estudiante Estudiante { get; set; }
+
+        public string CategoriaMotivo { get; set; } = string.Empty;
+        public string JustificacionTutor { get; set; } = string.Empty;
+        public string Estado { get; set; } = "Pendiente";
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+        public DateTime? FechaResolucion { get; set; }
         public string Dictamen { get; set; } = "Pendiente";
-        public int? IdDirectorResolucion { get; set; }
         public int MinutosToleranciaOtorgados { get; set; } = 0;
     }
 }

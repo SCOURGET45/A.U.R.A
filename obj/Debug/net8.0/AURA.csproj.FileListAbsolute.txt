@@ -1,0 +1,10 @@
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.csproj.AssemblyReference.cache
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.GeneratedMSBuildEditorConfig.editorconfig
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.AssemblyInfoInputs.cache
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.AssemblyInfo.cs
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.csproj.CoreCompileInputs.cache
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.MvcApplicationPartsAssemblyInfo.cache
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.RazorAssemblyInfo.cache
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.RazorAssemblyInfo.cs
+C:\Proyectos\A.U.R.A\obj\Debug\net8.0\AURA.sourcelink.json
