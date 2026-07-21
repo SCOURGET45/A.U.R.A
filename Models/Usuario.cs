@@ -13,5 +13,6 @@ namespace Aura.Models
         public string CorreoElectronico { get; set; }
         public string ContrasenaHash { get; set; } = "PendienteDeConfigurar";
         public bool Activo { get; set; } = true;
+        public Rol Rol { get; set; }
     }
 }

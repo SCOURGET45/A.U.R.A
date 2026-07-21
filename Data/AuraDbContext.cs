@@ -10,6 +10,7 @@ namespace Aura.Data
         }
 
         public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Rol> Roles { get; set; }
         public DbSet<Grupo> Grupos { get; set; }
         public DbSet<Estudiante> Estudiantes { get; set; }
         public DbSet<SolicitudVulnerabilidad> SolicitudesVulnerabilidad { get; set; }
