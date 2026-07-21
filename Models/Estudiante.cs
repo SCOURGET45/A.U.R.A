@@ -10,6 +10,8 @@ namespace Aura.Models
         public int IdEstudiante { get; set; }
         public int IdUsuario { get; set; }
         public int IdGrupo { get; set; }
-        public string Matricula { get; set; }
+        public string Matricula { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public string Apellidos { get; set; } = string.Empty;
     }
 }

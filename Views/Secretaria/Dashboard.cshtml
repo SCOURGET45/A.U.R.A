@@ -1,0 +1,48 @@
+@{
+    ViewData["Title"] = "Panel de Secretaría";
+}
+
+<div class="container mt-4">
+    <h2><i class="bi bi-building"></i> Panel de Administración Central</h2>
+    <hr />
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @TempData["Exito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Carga Masiva de Alumnos (Inicio de Cuatrimestre)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        Sube la plantilla oficial institucional en formato <strong>.CSV</strong>.
+                        El archivo debe contener las columnas: <code>Matrícula, Nombre, Apellidos, IdGrupo</code>.
+                    </p>
+
+                    <form asp-controller="Secretaria" asp-action="CargarAlumnosCSV" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <input class="form-control" type="file" id="archivoCsv" name="archivoCsv" accept=".csv" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-cloud-upload"></i> Procesar e Inscribir Alumnos
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
