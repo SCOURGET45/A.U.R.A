@@ -35,7 +35,7 @@ namespace Aura.Controllers
 
             var vulnerabilidad = await _context.SolicitudesVulnerabilidad
                 .Where(v => v.IdEstudiante == dto.IdEstudiante && v.Dictamen == "Aprobado")
-                .OrderByDescending(v => v.FechaSolicitud)
+                .OrderByDescending(v => v.FechaCreacion)
                 .FirstOrDefaultAsync();
 
             if (vulnerabilidad != null)
