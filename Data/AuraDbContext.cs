@@ -13,5 +13,8 @@ namespace Aura.Data
         public DbSet<Grupo> Grupos { get; set; }
         public DbSet<Estudiante> Estudiantes { get; set; }
         public DbSet<SolicitudVulnerabilidad> SolicitudesVulnerabilidad { get; set; }
+        public DbSet<Justificantes> Justificantes { get; set; }
+        public DbSet<Materia> Materias { get; set; }
+        public DbSet<Unidad> Unidades { get; set; }
     }
 }
