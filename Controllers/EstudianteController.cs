@@ -1,70 +1,79 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
+using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Aura.Data;
 using Aura.Models;
-using Aura.Services;
 
 namespace Aura.Controllers
 {
     [Authorize(Roles = "Estudiante")]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class EstudianteController : ControllerBase
+    [Route("Estudiante")]
+    public class EstudianteController : Controller
     {
         private readonly AuraDbContext _context;
-        private readonly IAsistenciaService _asistenciaService;
 
-        public EstudianteController(AuraDbContext context, IAsistenciaService asistenciaService)
+        public EstudianteController(AuraDbContext context)
         {
             _context = context;
-            _asistenciaService = asistenciaService;
         }
 
-        [HttpGet("Dashboard/{idEstudiante}/Unidad/{idUnidad}")]
-        public async Task<IActionResult> ObtenerDashboardUnidad(int idEstudiante, int idUnidad)
+        [HttpGet("Dashboard")]
+        public async Task<IActionResult> Dashboard()
         {
-            var unidad = await _context.Unidades.FindAsync(idUnidad);
-            if (unidad == null)
-                return NotFound("Unidad no encontrada.");
+            var idUsuario = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-            var historialAsistencias = await _context.Asistencias
-                .Where(a => a.IdEstudiante == idEstudiante)
-                .ToListAsync();
+            var estudiante = await _context.Estudiantes
+                .Include(e => e.Usuario)
+                .FirstOrDefaultAsync(e => e.IdUsuario == idUsuario);
 
-            var registrosParaServicio = historialAsistencias.Select(a => new RegistroAsistencia
+            if (estudiante == null)
             {
-                Estado = a.Estado.ToLower() == "retardo" ? TipoAsistencia.Retardo :
-                         a.Estado.ToLower() == "falta" ? TipoAsistencia.Falta :
-                         TipoAsistencia.Asistencia
-            }).ToList();
+                return NotFound();
+            }
 
-            var resultadoEvaluacion = _asistenciaService.CalcularAsistenciaUnidad(
-                registrosParaServicio,
-                unidad.TotalClasesProgramadas
-            );
+            int justificantesUsados = await _context.Justificantes
+                .CountAsync(j => j.IdEstudiante == estudiante.IdEstudiante);
 
-            var dashboardResponse = new
+            var viewModel = new DashboardEstudianteViewModel
             {
-                UnidadActual = unidad.NombreUnidad,
-                TotalClasesProgramadas = unidad.TotalClasesProgramadas,
-                IndicadoresVisuales = new
+                Nombre = estudiante.Usuario?.NombreCompleto ?? "Estudiante",
+                Matricula = estudiante.Matricula,
+                AsistenciaGlobal = 88.5,
+                JustificantesEmitidos = justificantesUsados,
+                TieneToleranciaActiva = estudiante.TieneToleranciaActiva,
+                Materias = new List<SemaforoMateriaViewModel>
                 {
-                    TermometroGlobal = $"{resultadoEvaluacion.PorcentajeActual}%",
-                    SemaforoDeUnidad = resultadoEvaluacion.Semaforo.ToString(),
-                    FaltasPermitidasRestantes = resultadoEvaluacion.FaltasPermitidasRestantes
-                },
-                DesgloseMicro = new
-                {
-                    Asistencias = registrosParaServicio.Count(x => x.Estado == TipoAsistencia.Asistencia),
-                    RetardosAcumulados = registrosParaServicio.Count(x => x.Estado == TipoAsistencia.Retardo),
-                    FaltasDirectas = registrosParaServicio.Count(x => x.Estado == TipoAsistencia.Falta)
+                    new SemaforoMateriaViewModel
+                    {
+                        NombreMateria = "Arquitectura de Software",
+                        FaltasAcumuladas = 1,
+                        LimiteFaltas = 6,
+                        PorcentajeAsistencia = 95.0,
+                        ColorSemaforo = "success"
+                    },
+                    new SemaforoMateriaViewModel
+                    {
+                        NombreMateria = "Base de Datos Avanzadas",
+                        FaltasAcumuladas = 4,
+                        LimiteFaltas = 5,
+                        PorcentajeAsistencia = 82.0,
+                        ColorSemaforo = "warning"
+                    },
+                    new SemaforoMateriaViewModel
+                    {
+                        NombreMateria = "Inglés Técnico",
+                        FaltasAcumuladas = 6,
+                        LimiteFaltas = 6,
+                        PorcentajeAsistencia = 75.0,
+                        ColorSemaforo = "danger"
+                    }
                 }
             };
 
-            return Ok(dashboardResponse);
+            return View(viewModel);
         }
     }
 }
