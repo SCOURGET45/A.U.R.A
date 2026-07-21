@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
@@ -13,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Aura.Controllers
 {
+    [Authorize(Roles = "Secretaria")]
     [Route("api/[controller]")]
     [ApiController]
     public class SecretariaController : ControllerBase

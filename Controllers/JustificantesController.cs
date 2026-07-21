@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Aura.Models.DTOs;
 
 namespace Aura.Controllers
 {
+    [Authorize(Roles = "Tutor")]
     [Route("api/[controller]")]
     [ApiController]
     public class JustificantesController : ControllerBase
