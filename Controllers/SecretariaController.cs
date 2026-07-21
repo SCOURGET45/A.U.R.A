@@ -1,16 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Globalization;
-using CsvHelper;
-using CsvHelper.Configuration;
-using Aura.Models.DTOs;
+using System.Collections.Generic;
 using Aura.Data;
 using Aura.Models;
-using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Aura.Controllers
 {
@@ -27,106 +24,89 @@ namespace Aura.Controllers
         }
 
         [HttpPost("CargaMasiva")]
-        public async Task<IActionResult> ProcesarCargaCSV(IFormFile archivo)
+        public async Task<IActionResult> SubirPlantillaCSV(IFormFile archivoCsv)
         {
-            var resultado = new ResultadoCargaDto();
+            if (archivoCsv == null || archivoCsv.Length == 0)
+                return BadRequest("Por favor, selecciona un archivo CSV válido.");
 
-            if (archivo == null || archivo.Length == 0)
-                return BadRequest("No se proporcionó ningún archivo.");
+            if (!archivoCsv.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("El formato del archivo debe ser .csv");
 
-            if (Path.GetExtension(archivo.FileName).ToLower() != ".csv")
-                return BadRequest("El formato del archivo debe ser CSV.");
+            var logErrores = new List<string>();
+            int filasProcesadas = 0;
 
-            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            using (var stream = new StreamReader(archivoCsv.OpenReadStream()))
             {
-                HasHeaderRecord = true,
-                MissingFieldFound = null
-            };
+                string encabezado = await stream.ReadLineAsync();
 
-            using (var stream = new StreamReader(archivo.OpenReadStream()))
-            using (var csv = new CsvReader(stream, config))
-            {
-                var registros = csv.GetRecords<CargaMasivaRowDto>().ToList();
-                int numeroFila = 1;
-
-                using var transaction = await _context.Database.BeginTransactionAsync();
-
-                try
+                while (!stream.EndOfStream)
                 {
-                    foreach (var fila in registros)
-                    {
-                        numeroFila++;
+                    var linea = await stream.ReadLineAsync();
+                    var valores = linea.Split(',');
 
-                        if (string.IsNullOrWhiteSpace(fila.Matricula) || string.IsNullOrWhiteSpace(fila.NombreGrupo))
+                    if (valores.Length < 4)
+                    {
+                        logErrores.Add($"Fila incompleta ignorada: {linea}");
+                        continue;
+                    }
+
+                    try
+                    {
+                        string matricula = valores[0].Trim();
+                        string nombre = valores[1].Trim();
+                        string correo = valores[2].Trim();
+                        string nombreGrupo = valores[3].Trim();
+
+                        bool existe = _context.Estudiantes.Any(e => e.Matricula == matricula);
+                        if (existe)
                         {
-                            resultado.Errores.Add(new LogErrorCarga
-                            {
-                                Fila = numeroFila,
-                                Descripcion = "Datos requeridos incompletos (Matrícula o Grupo)",
-                                DatoProblematico = fila.Matricula ?? "Vacio"
-                            });
+                            logErrores.Add($"El alumno con matrícula {matricula} ya está registrado.");
                             continue;
                         }
 
-                        var tutor = await _context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico == fila.CorreoTutor);
-                        if (tutor == null)
-                        {
-                            tutor = new Usuario { NombreCompleto = fila.NombreTutor, CorreoElectronico = fila.CorreoTutor, IdRol = 3 };
-                            _context.Usuarios.Add(tutor);
-                            await _context.SaveChangesAsync();
-                        }
-
-                        var grupo = await _context.Grupos.FirstOrDefaultAsync(g => g.NombreGrupo == fila.NombreGrupo);
+                        var grupo = _context.Grupos.FirstOrDefault(g => g.NombreGrupo == nombreGrupo);
                         if (grupo == null)
                         {
-                            grupo = new Grupo { NombreGrupo = fila.NombreGrupo, IdTutor = tutor.IdUsuario, IdCuatrimestre = 1 };
-                            _context.Grupos.Add(grupo);
-                            await _context.SaveChangesAsync();
-                        }
-
-                        var alumnoExistente = await _context.Estudiantes.FirstOrDefaultAsync(e => e.Matricula == fila.Matricula);
-                        if (alumnoExistente != null)
-                        {
-                            resultado.Errores.Add(new LogErrorCarga
-                            {
-                                Fila = numeroFila,
-                                Descripcion = "La matrícula ya se encuentra registrada en el sistema.",
-                                DatoProblematico = fila.Matricula
-                            });
+                            logErrores.Add($"Grupo '{nombreGrupo}' no encontrado para el alumno {matricula}.");
                             continue;
                         }
 
-                        var usuarioAlumno = new Usuario { NombreCompleto = fila.NombreAlumno, CorreoElectronico = fila.CorreoAlumno, IdRol = 1 };
-                        _context.Usuarios.Add(usuarioAlumno);
+                        var nuevoUsuario = new Usuario
+                        {
+                            NombreCompleto = nombre,
+                            CorreoElectronico = correo,
+                            ContrasenaHash = matricula,
+                            IdRol = 1,
+                            Activo = true
+                        };
+
+                        _context.Usuarios.Add(nuevoUsuario);
                         await _context.SaveChangesAsync();
 
                         var nuevoEstudiante = new Estudiante
                         {
-                            IdUsuario = usuarioAlumno.IdUsuario,
-                            Matricula = fila.Matricula,
-                            IdGrupo = grupo.IdGrupo
+                            IdUsuario = nuevoUsuario.IdUsuario,
+                            IdGrupo = grupo.IdGrupo,
+                            Matricula = matricula
                         };
+
                         _context.Estudiantes.Add(nuevoEstudiante);
-
-                        resultado.RegistrosExitosos++;
+                        filasProcesadas++;
                     }
+                    catch (Exception ex)
+                    {
+                        logErrores.Add($"Error al procesar la fila '{linea}': {ex.Message}");
+                    }
+                }
 
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-                }
-                catch (System.Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    return StatusCode(500, $"Error crítico procesando el archivo: {ex.Message}");
-                }
+                await _context.SaveChangesAsync();
             }
 
-            if (resultado.Errores.Any())
+            return Ok(new
             {
-                return Ok(new { Mensaje = "Carga completada con advertencias.", Detalle = resultado });
-            }
-
-            return Ok(new { Mensaje = "Carga masiva ejecutada con éxito total.", RegistrosInsertados = resultado.RegistrosExitosos });
+                Mensaje = $"Carga finalizada. {filasProcesadas} registros insertados con éxito.",
+                Errores = logErrores
+            });
         }
     }
 }
