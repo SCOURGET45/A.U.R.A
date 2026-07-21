@@ -108,5 +108,32 @@ namespace Aura.Controllers
                 Errores = logErrores
             });
         }
+
+        [HttpPost("ConfigurarUnidad")]
+        public async Task<IActionResult> ConfigurarUnidad([FromBody] UnidadAcademica modelo)
+        {
+            if (modelo.FechaFin <= modelo.FechaInicio)
+            {
+                return BadRequest("La fecha de fin debe ser mayor a la fecha de inicio.");
+            }
+
+            if (modelo.TotalClasesProgramadas <= 0)
+            {
+                return BadRequest("El total de clases programadas debe ser mayor a cero para calcular los porcentajes.");
+            }
+
+            _context.UnidadesAcademicas.Add(new UnidadAcademica
+            {
+                IdMateria = modelo.IdMateria,
+                NumeroUnidad = modelo.NumeroUnidad,
+                FechaInicio = modelo.FechaInicio,
+                FechaFin = modelo.FechaFin,
+                TotalClasesProgramadas = modelo.TotalClasesProgramadas
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok($"Unidad {modelo.NumeroUnidad} configurada correctamente. El sistema ahora puede calcular el 80% de margen.");
+        }
     }
 }
