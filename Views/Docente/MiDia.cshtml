@@ -1,0 +1,112 @@
+@model Aura.Models.DocenteMiDiaViewModel
+
+@{
+    ViewData["Title"] = "Mi Día - Docente";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Agenda del Día</h2>
+        <span class="text-muted fs-5">@Model.FechaActual.ToString("dddd, dd de MMMM de yyyy")</span>
+    </div>
+
+    <div class="row">
+        @if (!Model.Clases.Any())
+        {
+            <div class="col-12 text-center text-muted mt-5">
+                <h4><i class="bi bi-cup-hot"></i> No tienes clases programadas para hoy.</h4>
+            </div>
+        }
+        else
+        {
+            @foreach (var clase in Model.Clases)
+            {
+                string opacidad = clase.EstadoFase == "Completada" ? "opacity-50 bg-light" : "";
+                string borde = clase.EstadoFase == "En Curso" ? "border-primary border-2 shadow" : "border-0 shadow-sm";
+
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 @opacidad @borde">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0 text-primary fw-bold">@clase.Grupo</h5>
+                                @if (clase.EstadoFase == "En Curso")
+                                {
+                                    <span class="badge bg-success blink-soft">EN CURSO</span>
+                                }
+                            </div>
+
+                            <h6 class="card-subtitle mb-3 text-muted">@clase.Materia</h6>
+
+                            <p class="mb-1">
+                                <i class="bi bi-clock"></i>
+                                @clase.HoraInicio.ToString(@"hh\:mm") - @clase.HoraFin.ToString(@"hh\:mm")
+                            </p>
+
+                            @if (clase.AlertasVulnerabilidad)
+                            {
+                                <p class="small text-info mb-3">
+                                    <i class="bi bi-info-circle"></i> Hay alumnos con tolerancia activa hoy.
+                                </p>
+                            }
+                        </div>
+
+                        <div class="card-footer bg-transparent border-top-0 pb-3">
+                            @if (clase.EstadoFase == "En Curso")
+                            {
+                                <button class="btn btn-primary w-100 fw-bold"
+                                        onclick="emitirUltrasonido(this, @clase.IdSesion)">
+                                    <i class="bi bi-broadcast"></i> Iniciar Pase de Lista
+                                </button>
+                            }
+                            else if (clase.EstadoFase == "Completada")
+                            {
+                                <button class="btn btn-outline-secondary w-100" disabled>
+                                    <i class="bi bi-check2-all"></i> Clase Concluida
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-primary w-100" disabled>
+                                    Disponible a las @clase.HoraInicio.ToString(@"hh\:mm")
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<script>
+    function emitirUltrasonido(botonElemento, idSesion) {
+        const textoOriginal = botonElemento.innerHTML;
+        botonElemento.innerHTML = '<i class="bi bi-soundwave"></i> Emitiendo Señal (10s)...';
+        botonElemento.classList.replace('btn-primary', 'btn-success');
+        botonElemento.disabled = true;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscilador = audioCtx.createOscillator();
+        const ganancia = audioCtx.createGain();
+
+        oscilador.type = 'sine';
+        oscilador.frequency.value = 19500;
+
+        oscilador.connect(ganancia);
+        ganancia.connect(audioCtx.destination);
+        oscilador.start();
+
+        setTimeout(() => {
+            oscilador.stop();
+            audioCtx.close();
+
+            botonElemento.innerHTML = '<i class="bi bi-check-circle"></i> Lista Cerrada';
+            botonElemento.classList.replace('btn-success', 'btn-secondary');
+        }, 10000);
+    }
+</script>
+
+<style>
+    .blink-soft { animation: blinker 2s linear infinite; }
+    @@keyframes blinker { 50% { opacity: 0.5; } }
+</style>
