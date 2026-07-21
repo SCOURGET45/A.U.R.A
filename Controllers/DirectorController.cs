@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Aura.Data;
 using Aura.Models;
@@ -9,9 +10,8 @@ using Aura.Models;
 namespace Aura.Controllers
 {
     [Authorize(Roles = "Director")]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class DirectorController : ControllerBase
+    [Route("Director")]
+    public class DirectorController : Controller
     {
         private readonly AuraDbContext _context;
 
@@ -20,44 +20,49 @@ namespace Aura.Controllers
             _context = context;
         }
 
-        [HttpGet("BandejaVulnerabilidad")]
-        public async Task<IActionResult> VerSolicitudesPendientes()
+        [HttpGet("BandejaVulnerabilidades")]
+        public async Task<IActionResult> BandejaVulnerabilidades()
         {
-            var pendientes = await _context.SolicitudesVulnerabilidad
-                .Where(s => s.Dictamen == "Pendiente")
+            var solicitudes = await _context.SolicitudesVulnerabilidad
+                .Where(s => s.Estado == "Pendiente")
+                .Select(s => new SolicitudVulnerabilidadViewModel
+                {
+                    IdSolicitud = s.IdSolicitud,
+                    Matricula = s.Estudiante.Matricula,
+                    NombreAlumno = s.Estudiante.Nombre + " " + s.Estudiante.Apellidos,
+                    Grupo = s.Estudiante.Grupo.NombreGrupo,
+                    CategoriaMotivo = s.CategoriaMotivo,
+                    JustificacionTutor = s.JustificacionTutor,
+                    FechaPeticion = s.FechaCreacion
+                })
+                .OrderBy(s => s.FechaPeticion)
                 .ToListAsync();
 
-            return Ok(pendientes);
+            return View(solicitudes);
         }
 
-        [HttpPost("Dictaminar/{idSolicitud}")]
-        public async Task<IActionResult> EmitirDictamen(int idSolicitud, [FromBody] DictamenRequest request)
+        [HttpPost("Dictaminar")]
+        public async Task<IActionResult> Dictaminar(int idSolicitud, string decision)
         {
-            var solicitud = await _context.SolicitudesVulnerabilidad.FindAsync(idSolicitud);
+            var solicitud = await _context.SolicitudesVulnerabilidad
+                .Include(s => s.Estudiante)
+                .FirstOrDefaultAsync(s => s.IdSolicitud == idSolicitud);
 
-            if (solicitud == null)
-                return NotFound("Solicitud no encontrada.");
-
-            var idDirector = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
-            solicitud.Dictamen = request.Estado;
-            solicitud.IdDirectorResolucion = idDirector;
-
-            if (request.Estado == "Aprobado")
+            if (solicitud != null)
             {
-                solicitud.MinutosToleranciaOtorgados = request.MinutosTolerancia;
+                solicitud.Estado = decision;
+                solicitud.FechaResolucion = DateTime.Now;
+
+                if (decision == "Aprobado")
+                {
+                    solicitud.Estudiante.TieneToleranciaActiva = true;
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["Mensaje"] = $"La solicitud del alumno {solicitud.Estudiante.Matricula} fue {decision.ToLower()} exitosamente.";
             }
 
-            _context.SolicitudesVulnerabilidad.Update(solicitud);
-            await _context.SaveChangesAsync();
-
-            return Ok($"La solicitud ha sido {request.Estado}. El panel de la Secretaría ha sido actualizado.");
+            return RedirectToAction(nameof(BandejaVulnerabilidades));
         }
-    }
-
-    public class DictamenRequest
-    {
-        public string Estado { get; set; }
-        public int MinutosTolerancia { get; set; }
     }
 }
