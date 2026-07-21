@@ -1,24 +1,27 @@
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Aura.Models
 {
-    [Table("SolicitudesVulnerabilidad")]
     public class SolicitudVulnerabilidad
     {
-        [Key]
         public int IdSolicitud { get; set; }
 
         public int IdEstudiante { get; set; }
         public Estudiante Estudiante { get; set; }
 
-        public string CategoriaMotivo { get; set; } = string.Empty;
-        public string JustificacionTutor { get; set; } = string.Empty;
-        public string Estado { get; set; } = "Pendiente";
-        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+        public string CategoriaMotivo { get; set; }
+        public string JustificacionTutor { get; set; }
+        public string Estado { get; set; }
+        public DateTime FechaCreacion { get; set; }
         public DateTime? FechaResolucion { get; set; }
-        public string Dictamen { get; set; } = "Pendiente";
-        public int MinutosToleranciaOtorgados { get; set; } = 0;
+        public string Dictamen { get; set; }
+        public int MinutosToleranciaOtorgados { get; set; }
+
+        public int? IdTutor { get; set; }
+        public string Motivo { get; set; }
+        public string Descripcion { get; set; }
+        public DateTime FechaSolicitud { get; set; }
+        public DateTime? FechaJuntaComision { get; set; }
+        public int? IdDirectorResolucion { get; set; }
     }
 }
