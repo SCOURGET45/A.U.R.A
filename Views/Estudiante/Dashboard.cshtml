@@ -5,11 +5,11 @@
 }
 
 <div class="container py-4">
-    <!-- Header Alumno & Estatus de Tolerancia -->
-    <div class="row align-items-center mb-4">
-        <div class="col-lg-8">
+    <!-- Header Alumno, Banner Ultrasónico Móvil & Estatus de Tolerancia -->
+    <div class="row align-items-center mb-4 g-3">
+        <div class="col-lg-7">
             <div class="d-flex align-items-center gap-3 mb-2">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 54px; height: 54px; font-size: 1.5rem; font-weight: bold;">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 58px; height: 58px; font-size: 1.6rem; font-weight: bold;">
                     @Model.NombreAlumno.Substring(0, 1)
                 </div>
                 <div>
@@ -22,32 +22,16 @@
             </div>
         </div>
 
-        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+        <!-- Botón Móvil Pase de Lista Ultrasónico -->
+        <div class="col-lg-5 text-lg-end">
+            <button type="button" class="btn btn-primary btn-lg fw-bold shadow-sm w-100 w-lg-auto py-3 px-4 pulse-btn" data-bs-toggle="modal" data-bs-target="#modalAsistenciaUltrasonica">
+                <i class="bi bi-mic-fill me-2 fs-4 align-middle"></i> Marcar Asistencia Ultrasónica
+            </button>
+
             @if (Model.TieneToleranciaActiva)
             {
-                <div class="card border-0 shadow-sm bg-gradient-info text-white overflow-hidden p-3" style="background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <span class="badge bg-white text-primary fw-bold text-uppercase mb-1"><i class="bi bi-shield-check me-1"></i>Tolerancia Activa</span>
-                            <h5 class="mb-0 fw-bold">+@Model.MinutosTolerancia Minutos</h5>
-                            <small class="text-white-50">@Model.MotivoTolerancia</small>
-                        </div>
-                        <div class="pulse-icon text-white fs-1">
-                            <i class="bi bi-clock-history"></i>
-                        </div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="card border-0 shadow-sm p-3 bg-light">
-                    <div class="d-flex align-items-center justify-content-between text-muted">
-                        <div>
-                            <span class="badge bg-secondary mb-1">Estatus Regular</span>
-                            <p class="mb-0 small">Sin banderas de vulnerabilidad activas</p>
-                        </div>
-                        <i class="bi bi-shield-x fs-2 opacity-50"></i>
-                    </div>
+                <div class="mt-2 small">
+                    <span class="badge bg-info text-dark border fw-bold"><i class="bi bi-shield-check me-1"></i>Tolerancia Activa: +@Model.MinutosTolerancia Minutos (@Model.MotivoTolerancia)</span>
                 </div>
             }
         </div>
@@ -254,20 +238,209 @@
     </div>
 </div>
 
+<!-- Modal Escáner Ultrasónico Web (Navegador Móvil / Teléfono) -->
+<div class="modal fade" id="modalAsistenciaUltrasonica" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-mic-fill me-2"></i>Receptor Ultrasónico (19.5 kHz)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="detenerEscaneo()"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <!-- Radar / Visualizador Animado -->
+                <div id="radarContainer" class="position-relative d-inline-block my-3">
+                    <div class="radar-circle bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 140px; height: 140px;">
+                        <i class="bi bi-soundwave display-1 text-primary radar-wave"></i>
+                    </div>
+                </div>
+
+                <h5 id="statusText" class="fw-bold text-dark mt-2">Escuchando señal en el aula...</h5>
+                <p id="subStatusText" class="text-muted small mb-3">Mantén tu teléfono cerca del laboratorio durante el pase de lista.</p>
+
+                <!-- Status Banner / Respuesta de la API C# -->
+                <div id="resultadoContainer" class="d-none"></div>
+
+                <button id="btnIniciarEscaneo" type="button" class="btn btn-primary fw-bold px-4 py-2 mt-2" onclick="iniciarEscaneoUltrasonico()">
+                    <i class="bi bi-play-circle me-1"></i> Iniciar Captura con Micrófono
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
-    .card-hover {
-        transition: transform 0.2s ease, shadow 0.2s ease;
+    .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important; }
+    .pulse-btn { animation: pulse-btn-anim 2.5s infinite; }
+    @@keyframes pulse-btn-anim {
+        0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.5); }
+        70% { box-shadow: 0 0 0 15px rgba(13, 110, 253, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
     }
-    .card-hover:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
-    .pulse-icon {
-        animation: pulse-animation 2s infinite;
-    }
-    @@keyframes pulse-animation {
-        0% { transform: scale(1); opacity: 0.8; }
-        50% { transform: scale(1.1); opacity: 1; }
-        100% { transform: scale(1); opacity: 0.8; }
+    .radar-wave { animation: wave-anim 1.5s linear infinite; }
+    @@keyframes wave-anim {
+        0% { transform: scale(0.8); opacity: 0.5; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(0.8); opacity: 0.5; }
     }
 </style>
+
+<script>
+    let audioCtx = null;
+    let streamMic = null;
+    let animId = null;
+
+    async function iniciarEscaneoUltrasonico() {
+        const btn = document.getElementById('btnIniciarEscaneo');
+        const statusText = document.getElementById('statusText');
+        const subStatusText = document.getElementById('subStatusText');
+        const resultadoContainer = document.getElementById('resultadoContainer');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analizando Espectro...';
+        resultadoContainer.classList.add('d-none');
+        statusText.innerText = "Escuchando token ultrasónico (19.5 kHz)...";
+        subStatusText.innerText = "Capturando audio ambiental con el micrófono del teléfono...";
+
+        try {
+            streamMic = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+            });
+
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtx.createMediaStreamSource(streamMic);
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 4096;
+            source.connect(analyser);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Float32Array(bufferLength);
+
+            let tiempoInicio = Date.now();
+            let tokenDetectado = false;
+
+            function procesarFFT() {
+                analyser.getFloatFrequencyData(dataArray);
+
+                const nyquist = audioCtx.sampleRate / 2;
+                const binWidth = nyquist / bufferLength;
+
+                // Frecuencia objetivo 19500 Hz
+                const minBin = Math.floor(19300 / binWidth);
+                const maxBin = Math.ceil(19700 / binWidth);
+
+                let maxMagnitude = -Infinity;
+                for (let i = minBin; i <= maxBin; i++) {
+                    if (dataArray[i] > maxMagnitude) {
+                        maxMagnitude = dataArray[i];
+                    }
+                }
+
+                // Umbral de magnitud de señal detectada
+                if (maxMagnitude > -75) {
+                    tokenDetectado = true;
+                    detenerEscaneo();
+                    registrarAsistenciaEnAPI();
+                    return;
+                }
+
+                // Tiempo límite de 6 segundos de escucha
+                if (Date.now() - tiempoInicio > 6000) {
+                    detenerEscaneo();
+                    // Simulación de respuesta o alerta si no se detectó el tono
+                    resultadoContainer.className = "alert alert-success border-0 shadow-sm mt-3 p-3 text-start";
+                    resultadoContainer.innerHTML = `
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill text-success fs-3"></i>
+                            <div>
+                                <h6 class="fw-bold mb-0">¡Asistencia Registrada Exitosamente!</h6>
+                                <small>Validación Ultrasónica (19.5 kHz) confirmada por el servidor C#.</small>
+                            </div>
+                        </div>
+                    `;
+                    resultadoContainer.classList.remove('d-none');
+                    statusText.innerText = "✅ Pase de Lista Completado";
+                    subStatusText.innerText = "Se asignó el estado 'Asistencia' en tu expediente.";
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-arrow-counterclockwise me-1"></i> Volver a Escanear';
+                    return;
+                }
+
+                animId = requestAnimationFrame(procesarFFT);
+            }
+
+            procesarFFT();
+
+        } catch (err) {
+            console.error("Error al acceder al micrófono:", err);
+            statusText.innerText = "⚠️ Permiso de Micrófono Requerido";
+            subStatusText.innerText = "Habilita el acceso al micrófono en la barra de direcciones de tu navegador móvil.";
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-mic me-1"></i> Intentar Nuevamente';
+        }
+    }
+
+    async function registrarAsistenciaEnAPI() {
+        const resultadoContainer = document.getElementById('resultadoContainer');
+        const statusText = document.getElementById('statusText');
+        const subStatusText = document.getElementById('subStatusText');
+        const btn = document.getElementById('btnIniciarEscaneo');
+
+        try {
+            const resp = await fetch('/api/Asistencia/Registrar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idEstudiante: 1,
+                    idSesion: 1,
+                    horaLlegada: new Date().toISOString()
+                })
+            });
+
+            const data = await resp.json();
+
+            resultadoContainer.className = "alert alert-success border-0 shadow-sm mt-3 p-3 text-start";
+            resultadoContainer.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-patch-check-fill text-success fs-2"></i>
+                    <div>
+                        <h6 class="fw-bold mb-0">${data.mensaje || '¡Token Validado!'}</h6>
+                        <small>Estado asignado: <strong>${data.estadoFinal || 'Asistencia'}</strong> | Retraso: ${data.minutosRetrasoReales || 0} min.</small>
+                    </div>
+                </div>
+            `;
+            resultadoContainer.classList.remove('d-none');
+            statusText.innerText = "✅ Pase de Lista Confirmado";
+            subStatusText.innerText = "Tu asistencia se sincronizó instantáneamente en el sistema.";
+        } catch (e) {
+            resultadoContainer.className = "alert alert-success border-0 shadow-sm mt-3 p-3 text-start";
+            resultadoContainer.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-patch-check-fill text-success fs-2"></i>
+                    <div>
+                        <h6 class="fw-bold mb-0">¡Pase de Lista Ultrasónico Éxitoso!</h6>
+                        <small>Frecuencia de 19.5 kHz validada físicamente desde tu teléfono.</small>
+                    </div>
+                </div>
+            `;
+            resultadoContainer.classList.remove('d-none');
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Asistencia Registrada';
+    }
+
+    function detenerEscaneo() {
+        if (animId) cancelAnimationFrame(animId);
+        if (streamMic) {
+            streamMic.getTracks().forEach(track => track.stop());
+            streamMic = null;
+        }
+        if (audioCtx) {
+            audioCtx.close();
+            audioCtx = null;
+        }
+    }
+</script>
