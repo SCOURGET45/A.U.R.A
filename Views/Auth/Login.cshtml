@@ -51,26 +51,16 @@
                 <div class="col-md-7 p-5">
                     <h4 class="fw-bold mb-4">Bienvenido al Portal</h4>
 
-                    <form asp-controller="Auth" asp-action="Login" method="post">
-                        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
-
-                        <div class="form-floating mb-3">
-                            <input asp-for="Correo" type="email" class="form-control" id="floatingInput" placeholder="nombre@universidad.edu">
-                            <label for="floatingInput">Correo Institucional</label>
-                            <span asp-validation-for="Correo" class="text-danger small"></span>
+                    <form action="/Auth/Login" method="POST">
+                        <div class="mb-3">
+                            <input name="Correo" type="email" class="form-control" placeholder="Correo Institucional" required />
                         </div>
 
-                        <div class="form-floating mb-4">
-                            <input asp-for="Contrasena" type="password" class="form-control" id="floatingPassword" placeholder="Contraseña">
-                            <label for="floatingPassword">Contraseña</label>
-                            <span asp-validation-for="Contrasena" class="text-danger small"></span>
+                        <div class="mb-3">
+                            <input name="Contrasena" type="password" class="form-control" placeholder="Contraseña" required />
                         </div>
 
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold">
-                                Iniciar Sesión <i class="bi bi-box-arrow-in-right"></i>
-                            </button>
-                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Iniciar Sesión</button>
                     </form>
 
                     <div class="text-center mt-4">

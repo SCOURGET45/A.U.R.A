@@ -26,12 +26,23 @@ builder.Services.AddAuthorization();
 
 // Asegúrate de tener esto arriba (antes del builder.Build())
 builder.Services.AddControllersWithViews();
+// Añadir Swagger/OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
 // Habilitar archivos estáticos (como el CSS de Bootstrap que pusiste en la vista)
 app.UseStaticFiles();
 app.UseRouting();
+
+// Habilitar Swagger UI
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "A.U.R.A. v1");
+    c.RoutePrefix = "swagger"; // Ruta: /swagger
+});
 
 // Tus servicios de seguridad
 app.UseAuthentication();

@@ -37,31 +37,47 @@ namespace Aura.Controllers
                 return View(model);
 
             var usuario = await _context.Usuarios
+                .Include(u => u.Rol) // <-- VITAL para que traiga el texto "Secretaria"
                 .FirstOrDefaultAsync(u => u.CorreoElectronico == model.Correo && u.Activo == true);
 
-            if (usuario == null || usuario.ContrasenaHash != model.Contrasena)
+            if (usuario != null && model.Contrasena == usuario.ContrasenaHash) 
             {
-                ModelState.AddModelError(string.Empty, "Correo o contraseña incorrectos.");
-                return View(model);
+                // RASTREADOR PARA LA TERMINAL:
+                Console.WriteLine("=== INTENTO DE LOGIN ===");
+                Console.WriteLine("Rol detectado en BD: " + (usuario.Rol?.NombreRol ?? "EL ROL VINO NULO"));
+
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, usuario.IdUsuario.ToString()),
+                    new Claim(ClaimTypes.Name, usuario.CorreoElectronico),
+                    // ESTA LÍNEA ES LA QUE TE DA LA LLAVE DE ACCESO:
+                    new Claim(ClaimTypes.Role, usuario.Rol.NombreRol) 
+                };
+
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+
+                // Redirección dinámica según el rol del usuario
+                switch (usuario.Rol.NombreRol)
+                {
+                    case "Secretaria":
+                        Console.WriteLine("Redirigiendo a Dashboard de Secretaria...");
+                        return RedirectToAction("Dashboard", "Secretaria");
+                    case "Docente":
+                        return RedirectToAction("Index", "Docente"); // O la ruta que corresponda a tu Docente
+                    case "Estudiante":
+                        return RedirectToAction("Dashboard", "Estudiante");
+                    case "Director":
+                        return RedirectToAction("BandejaVulnerabilidades", "Director");
+                    case "Tutor":
+                        return RedirectToAction("MisTutorados", "Tutor");
+                    default:
+                        return RedirectToAction("Index", "Home");
+                }
             }
 
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, usuario.IdUsuario.ToString()),
-                new Claim(ClaimTypes.Name, usuario.NombreCompleto),
-                new Claim(ClaimTypes.Email, usuario.CorreoElectronico),
-                new Claim(ClaimTypes.Role, usuario.IdRol.ToString())
-            };
-
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var authProperties = new AuthenticationProperties { IsPersistent = true };
-
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(claimsIdentity),
-                authProperties);
-
-            return RedirectToAction("Index", "Home");
+            ModelState.AddModelError(string.Empty, "Intento de inicio de sesión no válido.");
+            return View(model);
         }
 
         public async Task<IActionResult> Logout()

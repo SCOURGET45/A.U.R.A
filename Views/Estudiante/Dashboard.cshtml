@@ -1,90 +1,273 @@
-@model Aura.Models.DashboardEstudianteViewModel
+@model Aura.Models.EstudianteDashboardViewModel
 
 @{
-    ViewData["Title"] = "Mi Panel - A.U.R.A.";
+    ViewData["Title"] = "Dashboard del Estudiante - A.U.R.A.";
 }
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2>Hola, @Model.Nombre</h2>
-            <p class="text-muted mb-0">Matrícula: <strong>@Model.Matricula</strong></p>
+<div class="container py-4">
+    <!-- Header Alumno & Estatus de Tolerancia -->
+    <div class="row align-items-center mb-4">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 54px; height: 54px; font-size: 1.5rem; font-weight: bold;">
+                    @Model.NombreAlumno.Substring(0, 1)
+                </div>
+                <div>
+                    <h2 class="fw-bold mb-0 text-dark">@Model.NombreAlumno</h2>
+                    <div class="d-flex gap-2 align-items-center mt-1">
+                        <span class="badge bg-dark text-uppercase px-2 py-1"><i class="bi bi-person-badge me-1"></i>@Model.Matricula</span>
+                        <span class="badge bg-secondary px-2 py-1"><i class="bi bi-people me-1"></i>Grupo @Model.NombreGrupo</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        @if (Model.TieneToleranciaActiva)
-        {
-            <div class="badge bg-info text-dark fs-6 p-2 shadow-sm border border-info">
-                <i class="bi bi-shield-check"></i> Tolerancia de Asistencia Activa
-            </div>
-        }
+        <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+            @if (Model.TieneToleranciaActiva)
+            {
+                <div class="card border-0 shadow-sm bg-gradient-info text-white overflow-hidden p-3" style="background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="badge bg-white text-primary fw-bold text-uppercase mb-1"><i class="bi bi-shield-check me-1"></i>Tolerancia Activa</span>
+                            <h5 class="mb-0 fw-bold">+@Model.MinutosTolerancia Minutos</h5>
+                            <small class="text-white-50">@Model.MotivoTolerancia</small>
+                        </div>
+                        <div class="pulse-icon text-white fs-1">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card border-0 shadow-sm p-3 bg-light">
+                    <div class="d-flex align-items-center justify-content-between text-muted">
+                        <div>
+                            <span class="badge bg-secondary mb-1">Estatus Regular</span>
+                            <p class="mb-0 small">Sin banderas de vulnerabilidad activas</p>
+                        </div>
+                        <i class="bi bi-shield-x fs-2 opacity-50"></i>
+                    </div>
+                </div>
+            }
+        </div>
     </div>
-    <hr />
 
-    <div class="row mb-5">
-        <div class="col-md-8">
-            <div class="card shadow-sm border-0 h-100">
+    <!-- 2.1 Dashboard Principal (Visión Macro) -->
+    <div class="row g-3 mb-4">
+        <!-- Termómetro de Asistencia Global -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 card-hover">
                 <div class="card-body">
-                    <h5 class="card-title text-muted"><i class="bi bi-thermometer-half"></i> Termómetro de Asistencia Global</h5>
-                    <div class="d-flex align-items-end mt-4 mb-2">
-                        <h1 class="display-4 fw-bold mb-0 me-2">@Model.AsistenciaGlobal%</h1>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted fw-bold small text-uppercase">Asistencia Global</span>
+                        <span class="badge rounded-pill @(Model.AsistenciaGlobal >= 90 ? "bg-success" : Model.AsistenciaGlobal >= 80 ? "bg-warning text-dark" : "bg-danger")">
+                            @(Model.AsistenciaGlobal >= 90 ? "Excelente" : Model.AsistenciaGlobal >= 80 ? "En Riesgo" : "Crítico")
+                        </span>
                     </div>
 
-                    @{ 
-                        string colorTermometro = Model.AsistenciaGlobal >= 90 ? "bg-success" : (Model.AsistenciaGlobal >= 80 ? "bg-warning" : "bg-danger");
-                    }
-
-                    <div class="progress" style="height: 25px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated @colorTermometro" role="progressbar" style="width: @Model.AsistenciaGlobal%;" aria-valuenow="@Model.AsistenciaGlobal" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="d-flex align-items-baseline my-2">
+                        <h1 class="display-5 fw-bold mb-0 text-dark me-2">@Model.AsistenciaGlobal%</h1>
+                        <i class="bi bi-speedometer2 fs-3 text-muted"></i>
                     </div>
-                    <p class="small text-muted mt-2">Recuerda: Si el global cae por debajo del 80%, pierdes derecho a evaluación.</p>
+
+                    <!-- Progress bar -->
+                    <div class="progress mt-3" style="height: 10px; border-radius: 5px;">
+                        <div class="progress-bar @(Model.AsistenciaGlobal >= 90 ? "bg-success" : Model.AsistenciaGlobal >= 80 ? "bg-warning" : "bg-danger")" 
+                             role="progressbar" style="width: @Model.AsistenciaGlobal%" 
+                             aria-valuenow="@Model.AsistenciaGlobal" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Promedio acumulado del cuatrimestre</small>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0 h-100 bg-light">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <h5 class="card-title text-muted">Bolsa de Justificantes</h5>
-                    <div class="display-1 fw-bold text-dark mt-2">
-                        @(2 - Model.JustificantesEmitidos)
+        <!-- Alertas de Riesgo -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 card-hover border-start border-4 @(Model.AlertasRiesgoCount > 0 ? "border-danger" : "border-success")">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted fw-bold small text-uppercase">Alertas de Riesgo</span>
+                        <i class="bi bi-exclamation-triangle-fill fs-4 @(Model.AlertasRiesgoCount > 0 ? "text-danger" : "text-muted opacity-50")"></i>
                     </div>
-                    <p class="text-muted">Disponibles este cuatrimestre</p>
-                    <div class="small">
-                        Usados: @Model.JustificantesEmitidos de 2
+
+                    <div class="d-flex align-items-baseline my-2">
+                        <h1 class="display-5 fw-bold mb-0 @(Model.AlertasRiesgoCount > 0 ? "text-danger" : "text-success")">@Model.AlertasRiesgoCount</h1>
+                        <span class="text-muted ms-2">materias</span>
                     </div>
+
+                    @if (Model.AlertasRiesgoCount > 0)
+                    {
+                        <div class="alert alert-danger py-1 px-2 mb-0 small mt-2">
+                            <i class="bi bi-exclamation-circle me-1"></i> Asistencia cerca o bajo el límite (&lt;80%).
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success py-1 px-2 mb-0 small mt-2">
+                            <i class="bi bi-check-circle me-1"></i> Sin materias en zona de riesgo.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Bolsa de Justificantes -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 card-hover">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted fw-bold small text-uppercase">Bolsa de Justificantes</span>
+                        <i class="bi bi-file-earmark-medical fs-4 text-primary"></i>
+                    </div>
+
+                    <div class="d-flex align-items-baseline my-2">
+                        <h1 class="display-5 fw-bold mb-0 text-dark">@Model.JustificantesUsados</h1>
+                        <span class="text-muted ms-1 fs-4">/ @Model.JustificantesMaximos</span>
+                        <span class="text-muted ms-2 small">usados</span>
+                    </div>
+
+                    @{
+                        int pctJustificantes = (int)((double)Model.JustificantesUsados / Model.JustificantesMaximos * 100);
+                    }
+                    <div class="progress mt-3" style="height: 10px; border-radius: 5px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: @pctJustificantes%" 
+                             aria-valuenow="@pctJustificantes" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Límite institucional: Máximo 2 por cuatrimestre</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Días Totales Justificados -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100 card-hover">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted fw-bold small text-uppercase">Días Justificados</span>
+                        <i class="bi bi-calendar-check fs-4 text-info"></i>
+                    </div>
+
+                    <div class="d-flex align-items-baseline my-2">
+                        <h1 class="display-5 fw-bold mb-0 text-dark">@Model.DiasAmparados</h1>
+                        <span class="text-muted ms-1 fs-4">/ @Model.DiasAmparadosMaximos</span>
+                        <span class="text-muted ms-2 small">días</span>
+                    </div>
+
+                    @{
+                        int pctDias = (int)((double)Model.DiasAmparados / Model.DiasAmparadosMaximos * 100);
+                    }
+                    <div class="progress mt-3" style="height: 10px; border-radius: 5px;">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: @pctDias%" 
+                             aria-valuenow="@pctDias" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Tope máximo de 15 días por enfermedad</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <h4 class="mb-3"><i class="bi bi-traffic-light"></i> Semáforo de Unidad</h4>
-    <div class="row">
-        @foreach (var materia in Model.Materias)
+    <!-- 2.2 Desglose por Materia (Visión Micro y Unidades) -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-journal-bookmark-fill text-primary me-2"></i>Desglose por Materia y Unidad Temática
+        </h4>
+        <span class="badge bg-light text-dark border"><i class="bi bi-funnel me-1"></i>Unidad en Curso</span>
+    </div>
+
+    <div class="row g-4">
+        @foreach (var materia in Model.MateriasActivas)
         {
-            <div class="col-md-4 mb-3">
-                <div class="card shadow-sm border-start border-4 border-@materia.ColorSemaforo">
+            string colorSemaforoBadge = materia.Semaforo == "Verde" ? "bg-success" : (materia.Semaforo == "Amarillo" ? "bg-warning text-dark" : "bg-danger");
+            string borderCardColor = materia.Semaforo == "Verde" ? "border-success" : (materia.Semaforo == "Amarillo" ? "border-warning" : "border-danger");
+
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100 border-top border-4 @borderCardColor card-hover">
                     <div class="card-body">
-                        <h6 class="fw-bold text-truncate" title="@materia.NombreMateria">@materia.NombreMateria</h6>
-                        <hr />
-                        <div class="d-flex justify-content-between align-items-center">
+                        <!-- Top Header Materia & Semáforo -->
+                        <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <span class="fs-4 fw-bold">@materia.FaltasAcumuladas</span>
-                                <span class="text-muted">/ @materia.LimiteFaltas faltas</span>
+                                <h5 class="fw-bold mb-1 text-dark">@materia.NombreMateria</h5>
+                                <span class="badge bg-light text-secondary border small"><i class="bi bi-layers me-1"></i>@materia.UnidadActual</span>
                             </div>
-                            <span class="badge bg-@materia.ColorSemaforo fs-6">@materia.PorcentajeAsistencia%</span>
+                            <div class="text-end">
+                                <span class="badge @colorSemaforoBadge px-3 py-2 fs-6 rounded-pill shadow-sm">
+                                    <i class="bi bi-circle-fill me-1 small"></i> @materia.PorcentajeAsistencia%
+                                </span>
+                                <div class="small fw-bold text-muted mt-1">
+                                    Semáforo: @materia.Semaforo
+                                </div>
+                            </div>
                         </div>
 
-                        @if (materia.ColorSemaforo == "warning")
-                        {
-                            <div class="text-warning small mt-2 fw-bold"><i class="bi bi-exclamation-triangle"></i> Estás a una falta del límite.</div>
-                        }
-                        else if (materia.ColorSemaforo == "danger")
-                        {
-                            <div class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle"></i> Límite de inasistencias excedido.</div>
-                        }
+                        <hr class="my-3 text-muted opacity-25" />
+
+                        <!-- Indicadores Grid -->
+                        <div class="row g-3 text-center">
+                            <!-- Límite de Inasistencias -->
+                            <div class="col-6 col-sm-4">
+                                <div class="p-2 rounded bg-light border">
+                                    <small class="text-muted d-block fw-semibold mb-1">Margen Permitido</small>
+                                    <span class="fs-5 fw-bold text-dark">@materia.FaltasPermitidasRestantes</span>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">faltas restantes (20%)</small>
+                                </div>
+                            </div>
+
+                            <!-- Faltas Acumuladas -->
+                            <div class="col-6 col-sm-4">
+                                <div class="p-2 rounded bg-light border">
+                                    <small class="text-muted d-block fw-semibold mb-1">Faltas Totales</small>
+                                    <span class="fs-5 fw-bold @(materia.FaltasAcumuladas >= materia.LimiteFaltasTotal ? "text-danger" : "text-dark")">@materia.FaltasAcumuladas</span>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">de @materia.LimiteFaltasTotal máx.</small>
+                                </div>
+                            </div>
+
+                            <!-- Contador de Retardos -->
+                            <div class="col-12 col-sm-4">
+                                <div class="p-2 rounded bg-light border">
+                                    <small class="text-muted d-block fw-semibold mb-1">Contador Retardos</small>
+                                    <div class="d-flex justify-content-center align-items-center gap-1">
+                                        <span class="fs-5 fw-bold text-primary">@materia.RetardosAcumulados</span>
+                                        <span class="text-muted fs-6">/ 3</span>
+                                    </div>
+                                    <small class="text-primary d-block fw-bold" style="font-size: 0.7rem;">3 Retardos = 1 Falta</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detalle de Clases & Progress Bar -->
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                                <span>Asistencia acumulada en la unidad:</span>
+                                <span class="fw-bold">@materia.ClasesAsistidas / @materia.TotalClasesUnidad clases</span>
+                            </div>
+                            <div class="progress" style="height: 8px; border-radius: 4px;">
+                                <div class="progress-bar @(materia.Semaforo == "Verde" ? "bg-success" : materia.Semaforo == "Amarillo" ? "bg-warning" : "bg-danger")" 
+                                     role="progressbar" style="width: @materia.PorcentajeAsistencia%" 
+                                     aria-valuenow="@materia.PorcentajeAsistencia" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         }
     </div>
 </div>
+
+<style>
+    .card-hover {
+        transition: transform 0.2s ease, shadow 0.2s ease;
+    }
+    .card-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    .pulse-icon {
+        animation: pulse-animation 2s infinite;
+    }
+    @@keyframes pulse-animation {
+        0% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.8; }
+    }
+</style>
