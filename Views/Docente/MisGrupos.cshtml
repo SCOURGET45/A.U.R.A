@@ -1,0 +1,110 @@
+@model Aura.Models.DocenteMisGruposViewModel
+
+@{
+    ViewData["Title"] = "Mis Grupos - Docente";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="bi bi-collection-fill text-primary me-2"></i>Gestión Administrativa - Mis Grupos
+            </h2>
+            <p class="text-muted mb-0">Navegación jerárquica de grupos asignados, barras de progreso y descarga de listas en formato institucional.</p>
+        </div>
+        <a asp-action="MiDia" class="btn btn-outline-primary fw-bold">
+            <i class="bi bi-broadcast me-1"></i> Modo "Mi Día" (Pase de Lista)
+        </a>
+    </div>
+
+    <!-- Grupos Grid -->
+    <div class="row g-4">
+        @foreach (var g in Model.Grupos)
+        {
+            string statusColor = g.PromedioAsistencia >= 90 ? "bg-success" : (g.PromedioAsistencia >= 80 ? "bg-warning text-dark" : "bg-danger");
+            string borderColor = g.PromedioAsistencia >= 90 ? "border-success" : (g.PromedioAsistencia >= 80 ? "border-warning" : "border-danger");
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm border-top border-4 @borderColor card-hover">
+                    <div class="card-body">
+                        <!-- Header Drill-Down Nivel 1, 2, 3 -->
+                        <div class="mb-2">
+                            <span class="badge bg-light text-muted border small"><i class="bi bi-diagram-3 me-1"></i>@g.Carrera</span>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <h4 class="fw-bold text-dark mb-0">@g.NombreGrupo</h4>
+                                <span class="badge bg-secondary">@g.Cuatrimestre</span>
+                            </div>
+                        </div>
+
+                        <h6 class="text-primary fw-bold mb-3">@g.Materia</h6>
+
+                        <!-- Barra de Progreso Asistencia -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center small mb-1">
+                                <span class="text-muted fw-semibold">Asistencia Promedio del Grupo:</span>
+                                <span class="badge @statusColor fs-6">@g.PromedioAsistencia%</span>
+                            </div>
+                            <div class="progress" style="height: 10px; border-radius: 5px;">
+                                <div class="progress-bar @(g.PromedioAsistencia >= 90 ? "bg-success" : g.PromedioAsistencia >= 80 ? "bg-warning" : "bg-danger")" 
+                                     role="progressbar" style="width: @g.PromedioAsistencia%" 
+                                     aria-valuenow="@g.PromedioAsistencia" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        <!-- Indicadores Grid -->
+                        <div class="row g-2 text-center my-3">
+                            <div class="col-6">
+                                <div class="p-2 rounded bg-light border">
+                                    <small class="text-muted d-block fw-semibold" style="font-size: 0.75rem;">Alumnos</small>
+                                    <span class="fw-bold fs-6 text-dark">@g.TotalAlumnos</span>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="p-2 rounded bg-light border">
+                                    <small class="text-muted d-block fw-semibold" style="font-size: 0.75rem;">En Riesgo</small>
+                                    <span class="fw-bold fs-6 @(g.AlumnosEnRiesgoCount > 0 ? "text-danger" : "text-success")">
+                                        @g.AlumnosEnRiesgoCount
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="p-2 rounded bg-light border">
+                                    <small class="text-muted d-block fw-semibold" style="font-size: 0.75rem;">Regla 3R = 1F</small>
+                                    <span class="fw-bold fs-6 text-primary">@g.RetardosConvertidosFaltasCount</span>
+                                    <small class="text-muted d-block" style="font-size: 0.65rem;">faltas aplicadas</small>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="p-2 rounded bg-light border">
+                                    <small class="text-muted d-block fw-semibold" style="font-size: 0.75rem;">Tolerancias</small>
+                                    <span class="fw-bold fs-6 text-info">@g.AlumnosWithToleranciaCount</span>
+                                    <small class="text-muted d-block" style="font-size: 0.65rem;">vulnerables</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action: Download Excel -->
+                    <div class="card-footer bg-transparent border-top-0 pt-0 pb-3">
+                        <a asp-action="DescargarLista" asp-route-idGrupo="@g.IdGrupo" class="btn btn-outline-success w-100 fw-bold shadow-sm">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Descargar Lista Institucional (Excel)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .card-hover {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12) !important;
+    }
+</style>

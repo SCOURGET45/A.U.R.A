@@ -1,47 +1,214 @@
+@model Aura.Models.SecretariaDashboardViewModel
+
 @{
-    ViewData["Title"] = "Panel de Secretaría";
+    ViewData["Title"] = "Panel de Secretaría - A.U.R.A.";
 }
 
-<div class="container mt-4">
-    <h2><i class="bi bi-building"></i> Panel de Administración Central</h2>
-    <hr />
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="bi bi-building-gear text-primary me-2"></i>Administración Central & Secretaría
+            </h2>
+            <p class="text-muted mb-0">Carga masiva de la plantilla cuatrimestral, gestión del directorio y panel consolidado de tolerancias.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="ConfigurarUnidades" class="btn btn-outline-primary fw-bold">
+                <i class="bi bi-gear-wide-connected me-1"></i> Configuración de Unidades
+            </a>
+            <a asp-action="AlumnosVulnerables" class="btn btn-primary fw-bold">
+                <i class="bi bi-shield-lock me-1"></i> Alumnos Vulnerables
+            </a>
+        </div>
+    </div>
 
     @if (TempData["Exito"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill"></i> @TempData["Exito"]
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i> @TempData["Exito"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i> @TempData["Error"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">Carga Masiva de Alumnos (Inicio de Cuatrimestre)</h5>
+    <!-- Cards KPI Secretaría -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Alumnos Inscritos</small>
+                        <h2 class="display-6 fw-bold mb-0">@Model.TotalAlumnosInscritos</h2>
+                    </div>
+                    <i class="bi bi-person-lines-fill fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-dark text-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Grupos Activos</small>
+                        <h2 class="display-6 fw-bold mb-0">@Model.TotalGruposActivos</h2>
+                    </div>
+                    <i class="bi bi-collection fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-info text-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Alumnos Vulnerables</small>
+                        <h2 class="display-6 fw-bold mb-0">@Model.TotalAlumnosVulnerables</h2>
+                    </div>
+                    <i class="bi bi-shield-check fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-secondary text-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Materias Config.</small>
+                        <h2 class="display-6 fw-bold mb-0">@Model.TotalMateriasConfiguradas</h2>
+                    </div>
+                    <i class="bi bi-journal-check fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- 5.1 Carga Masiva CSV -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-cloud-upload me-2"></i>Carga Masiva de Alumnos (CSV)</h5>
                 </div>
                 <div class="card-body">
                     <p class="text-muted small">
-                        Sube la plantilla oficial institucional en formato <strong>.CSV</strong>.
-                        El archivo debe contener las columnas: <code>Matrícula, Nombre, Apellidos, IdGrupo</code>.
+                        Sube la plantilla oficial institucional en formato <strong>.CSV</strong> al inicio del cuatrimestre.
+                        El sistema mapeará automáticamente alumnos, grupos, docentes y tutores.
                     </p>
 
                     <form asp-controller="Secretaria" asp-action="CargarAlumnosCSV" method="post" enctype="multipart/form-data">
                         <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Seleccionar archivo .CSV</label>
                             <input class="form-control" type="file" id="archivoCsv" name="archivoCsv" accept=".csv" required>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-cloud-upload"></i> Procesar e Inscribir Alumnos
+                        <div class="alert alert-light border small text-muted mb-3">
+                            <code>Matrícula, Nombre, Apellidos, IdGrupo, NombreDocente, NombreTutor</code>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">
+                            <i class="bi bi-cloud-arrow-up-fill me-1"></i> Procesar e Inscribir Plantilla Masiva
                         </button>
                     </form>
                 </div>
+            </div>
+        </div>
+
+        <!-- 5.1 Directorio Jerárquico Árbol (Áreas -> Cuatrimestres -> Grupos) -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-diagram-3 me-2"></i>Directorio Institucional (Árbol)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">Estructura jerárquica de la División Académica (Drill-Down):</p>
+
+                    <div class="accordion" id="accordionDirectorio">
+                        <div class="accordion-item border-0 mb-2 shadow-sm rounded">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button fw-bold text-primary bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                    <i class="bi bi-laptop me-2"></i> Área: Tecnologías de la Información
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionDirectorio">
+                                <div class="accordion-body small">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span><i class="bi bi-folder2-open me-2 text-warning"></i>Noveno Cuatrimestre</span>
+                                            <span class="badge bg-primary">Grupo 9IDGS-G2 (28 Alumnos)</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span><i class="bi bi-folder2-open me-2 text-warning"></i>Noveno Cuatrimestre</span>
+                                            <span class="badge bg-primary">Grupo 9IDGS-G1 (30 Alumnos)</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item border-0 shadow-sm rounded">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button collapsed fw-bold text-dark bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    <i class="bi bi-cpu me-2"></i> Área: Mecatrónica y Sistemas Automatizados
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionDirectorio">
+                                <div class="accordion-body small">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span><i class="bi bi-folder2-open me-2 text-warning"></i>Séptimo Cuatrimestre</span>
+                                            <span class="badge bg-secondary">Grupo 7MEC-G1 (25 Alumnos)</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5.2 Panel de Alumnos Vulnerables (Solo Lectura) -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-semibold"><i class="bi bi-shield-check me-2"></i>Panel Consolidado de Alumnos Vulnerables (Solo Lectura)</h5>
+            <span class="badge bg-info text-dark">Banderas de Tolerancia Activas</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Matrícula</th>
+                            <th>Alumno</th>
+                            <th>Grupo</th>
+                            <th>Tutor Responsable</th>
+                            <th>Motivo Vulnerabilidad</th>
+                            <th class="text-center">Tolerancia Otorgada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var alumno in Model.AlumnosVulnerables)
+                        {
+                            <tr>
+                                <td class="fw-bold text-muted">@alumno.Matricula</td>
+                                <td class="fw-bold text-dark">@alumno.NombreCompleto</td>
+                                <td><span class="badge bg-light text-dark border">@alumno.NombreGrupo</span></td>
+                                <td>@alumno.NombreTutor</td>
+                                <td><span class="badge bg-info text-dark">@alumno.Motivo</span></td>
+                                <td class="text-center">
+                                    <span class="badge bg-success px-3 py-2 fs-6">
+                                        <i class="bi bi-clock-history me-1"></i> +@alumno.MinutosTolerancia min.
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

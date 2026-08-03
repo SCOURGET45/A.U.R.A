@@ -1,0 +1,58 @@
+@model Aura.Models.ConfigurarUnidadViewModel
+
+@{
+    ViewData["Title"] = "Configuración de Unidades - Secretaría";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-gear-wide-connected text-primary me-2"></i>Configuración de Unidades Temáticas
+                </h3>
+                <a asp-action="Dashboard" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Volver a Panel
+                </a>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-sliders me-2"></i>Parámetros por Materia</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="ConfigurarUnidades" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="NombreMateria" class="form-label fw-bold">Materia a Configurar</label>
+                            <input asp-for="NombreMateria" class="form-control form-control-lg" readonly />
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="NumeroUnidades" class="form-label fw-bold">Cantidad de Unidades Temáticas</label>
+                            <input asp-for="NumeroUnidades" type="number" class="form-control" min="1" max="10" required />
+                            <span asp-validation-for="NumeroUnidades" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="TotalClasesCuatrimestre" class="form-label fw-bold">Total de Clases Planificadas en el Cuatrimestre</label>
+                            <input asp-for="TotalClasesCuatrimestre" type="number" class="form-control" min="5" max="100" required />
+                            <span asp-validation-for="TotalClasesCuatrimestre" class="text-danger small"></span>
+                            <small class="form-text text-muted">
+                                Este parámetro es fundamental para calcular de manera automática el margen del 80% de asistencia mínima requerida para tener derecho a evaluación.
+                            </small>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a asp-action="Dashboard" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary px-4 fw-bold">
+                                <i class="bi bi-save me-1"></i> Guardar Configuración
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

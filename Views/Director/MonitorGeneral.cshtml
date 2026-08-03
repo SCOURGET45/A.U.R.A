@@ -1,0 +1,119 @@
+@model Aura.Models.DirectorMonitorViewModel
+
+@{
+    ViewData["Title"] = "Monitor General & Analítica - Director";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="bi bi-graph-up-arrow text-primary me-2"></i>Monitor General & Analítica Divisional
+            </h2>
+            <p class="text-muted mb-0">Estadísticas preventivas de asistencia y detección temprana de deserción estudiantil.</p>
+        </div>
+        <a asp-action="BandejaVulnerabilidades" class="btn btn-outline-secondary fw-bold">
+            <i class="bi bi-inbox-fill me-1"></i> Ir a Bandeja de Vulnerabilidades
+        </a>
+    </div>
+
+    <!-- Cards KPI Divisionales -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-primary text-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Matrícula Activa</small>
+                        <h2 class="display-6 fw-bold mb-0">@Model.TotalEstudiantes</h2>
+                    </div>
+                    <i class="bi bi-people fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-danger text-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Alumnos en Riesgo</small>
+                        <h2 class="display-6 fw-bold mb-0">@Model.AlumnosEnRiesgo</h2>
+                    </div>
+                    <i class="bi bi-exclamation-octagon fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-info text-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Casos Vulnerables</small>
+                        <h2 class="display-6 fw-bold mb-0">@Model.CasosVulnerablesActivos</h2>
+                    </div>
+                    <i class="bi bi-shield-check fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100 bg-success text-white p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-white-50 text-uppercase fw-bold">Promedio Asistencia</small>
+                        <h2 class="display-6 fw-bold mb-0">@Model.PromedioAsistenciaDivisional%</h2>
+                    </div>
+                    <i class="bi bi-speedometer fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desglose por Carreras / Áreas -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white py-3">
+            <h5 class="mb-0 fw-semibold"><i class="bi bi-diagram-3 me-2"></i>Asistencia por Programa Educativo</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Carrera / Área</th>
+                            <th class="text-center">Grupos</th>
+                            <th class="text-center">Asistencia Promedio</th>
+                            <th class="text-center">Riesgo Deserción</th>
+                            <th class="text-center">Estatus</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.Carreras)
+                        {
+                            <tr>
+                                <td class="fw-bold text-dark">@c.NombreCarrera</td>
+                                <td class="text-center"><span class="badge bg-light text-dark border">@c.TotalGrupos Grupos</span></td>
+                                <td class="text-center">
+                                    <span class="fw-bold fs-6 @(c.PromedioAsistencia >= 90 ? "text-success" : "text-warning")">
+                                        @c.PromedioAsistencia%
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger">@c.AlumnosEnRiesgo Alumnos</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (c.PromedioAsistencia >= 90)
+                                    {
+                                        <span class="badge bg-success">Óptimo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Atención Preventiva</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
