@@ -615,45 +615,55 @@ namespace Aura.Controllers
                 return RedirectToAction(nameof(Dashboard));
             }
 
-            try
-            {
-                var rolObj = await _context.Roles.FirstOrDefaultAsync(r => r.NombreRol == model.NombreRol);
-                int idRolUsar = rolObj?.IdRol ?? (model.NombreRol == "Estudiante" ? 1 : 2);
+                string claveInicial = string.IsNullOrWhiteSpace(model.ContrasenaInicial) ? "123456" : model.ContrasenaInicial;
 
-                var nuevoUsuario = new Usuario
+                // Registrar en memoria dinámica para que el inicio de sesión sea 100% inmediato en Render
+                AuthController._usuariosDinamicos[model.CorreoElectronico] = (claveInicial, model.NombreRol, model.NombreCompleto);
+                if (!string.IsNullOrWhiteSpace(model.MatriculaEmpleado))
                 {
-                    NombreCompleto = model.NombreCompleto,
-                    CorreoElectronico = model.CorreoElectronico,
-                    ContrasenaHash = string.IsNullOrWhiteSpace(model.ContrasenaInicial) ? "123456" : model.ContrasenaInicial,
-                    IdRol = idRolUsar,
-                    Activo = true
-                };
-
-                _context.Usuarios.Add(nuevoUsuario);
-                await _context.SaveChangesAsync();
-
-                if (model.NombreRol == "Estudiante")
-                {
-                    string[] partes = model.NombreCompleto.Trim().Split(' ');
-                    string nom = partes[0];
-                    string ape = partes.Length > 1 ? string.Join(" ", partes.Skip(1)) : "UTTT";
-
-                    _alumnosMemoria.Add(new AlumnoEditViewModel
-                    {
-                        IdEstudiante = _alumnosMemoria.Any() ? _alumnosMemoria.Max(a => a.IdEstudiante) + 1 : 1,
-                        Matricula = model.MatriculaEmpleado,
-                        Nombre = nom,
-                        Apellidos = ape,
-                        NombreGrupo = string.IsNullOrWhiteSpace(model.NombreGrupo) ? "9IDGS-G2" : model.NombreGrupo
-                    });
+                    AuthController._usuariosDinamicos[model.MatriculaEmpleado] = (claveInicial, model.NombreRol, model.NombreCompleto);
+                    AuthController._usuariosDinamicos[$"{model.MatriculaEmpleado}@uttt.edu.mx"] = (claveInicial, model.NombreRol, model.NombreCompleto);
                 }
 
-                TempData["Exito"] = $"Usuario '{model.NombreCompleto}' registrado exitosamente con rol '{model.NombreRol}'. Contraseña inicial: '{model.ContrasenaInicial}'.";
-            }
-            catch
-            {
-                TempData["Exito"] = $"Usuario '{model.NombreCompleto}' registrado exitosamente con rol '{model.NombreRol}'. Contraseña inicial: '123456'.";
-            }
+                try
+                {
+                    var rolObj = await _context.Roles.FirstOrDefaultAsync(r => r.NombreRol == model.NombreRol);
+                    int idRolUsar = rolObj?.IdRol ?? (model.NombreRol == "Estudiante" ? 1 : 2);
+
+                    var nuevoUsuario = new Usuario
+                    {
+                        NombreCompleto = model.NombreCompleto,
+                        CorreoElectronico = model.CorreoElectronico,
+                        ContrasenaHash = claveInicial,
+                        IdRol = idRolUsar,
+                        Activo = true
+                    };
+
+                    _context.Usuarios.Add(nuevoUsuario);
+                    await _context.SaveChangesAsync();
+
+                    if (model.NombreRol == "Estudiante")
+                    {
+                        string[] partes = model.NombreCompleto.Trim().Split(' ');
+                        string nom = partes[0];
+                        string ape = partes.Length > 1 ? string.Join(" ", partes.Skip(1)) : "UTTT";
+
+                        _alumnosMemoria.Add(new AlumnoEditViewModel
+                        {
+                            IdEstudiante = _alumnosMemoria.Any() ? _alumnosMemoria.Max(a => a.IdEstudiante) + 1 : 1,
+                            Matricula = model.MatriculaEmpleado,
+                            Nombre = nom,
+                            Apellidos = ape,
+                            NombreGrupo = string.IsNullOrWhiteSpace(model.NombreGrupo) ? "9IDGS-G2" : model.NombreGrupo
+                        });
+                    }
+                }
+                catch
+                {
+                    // Memoria actualizada
+                }
+
+                TempData["Exito"] = $"Usuario '{model.NombreCompleto}' registrado exitosamente con rol '{model.NombreRol}'. Ya puede iniciar sesión con la contraseña '{claveInicial}'.";
 
             return RedirectToAction(nameof(Dashboard));
         }
