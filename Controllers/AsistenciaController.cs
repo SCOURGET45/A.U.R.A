@@ -46,6 +46,21 @@ namespace Aura.Controllers
             }
         }
 
+        public static string NormalizarTexto(string txt)
+        {
+            if (string.IsNullOrWhiteSpace(txt)) return string.Empty;
+            string unaccent = txt.Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in unaccent)
+            {
+                if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                {
+                    if (char.IsLetterOrDigit(c)) sb.Append(char.ToUpperInvariant(c));
+                }
+            }
+            return sb.ToString();
+        }
+
         // Endpoint GET: Obtener Pase de Lista en Vivo del Grupo en Atendimiento
         [HttpGet("ObtenerPaseListaGrupo")]
         public async Task<IActionResult> ObtenerPaseListaGrupo([FromQuery] string grupo = "9IDGS-G2")
@@ -80,11 +95,36 @@ namespace Aura.Controllers
                 new { id = 26, mat = "23301260", nom = "YAEL MONROY CRUZ" }
             };
 
-            // Estructura unificada de alumnos
+            // Estructura unificada de alumnos con desduplicación por Nombre y Matrícula
             var listaCompleta = new List<AlumnoMonitorDto>();
             var matriculasAgregadas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var nombresNormalizadosAgregados = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Alumnos desde la BD
+            // 1. Alumnos registrados/subidos dinámicamente en Secretaría (Máxima Prioridad de Reemplazo)
+            try
+            {
+                foreach (var am in SecretariaController._alumnosMemoria)
+                {
+                    string nomCompleto = $"{am.Nombre} {am.Apellidos}".Trim();
+                    string normNom = NormalizarTexto(nomCompleto);
+                    string matClean = am.Matricula.Split('@')[0].Trim();
+
+                    if (matriculasAgregadas.Add(matClean) && (string.IsNullOrEmpty(normNom) || nombresNormalizadosAgregados.Add(normNom)))
+                    {
+                        listaCompleta.Add(new AlumnoMonitorDto
+                        {
+                            IdEstudiante = am.IdEstudiante,
+                            Matricula = matClean,
+                            NombreCompleto = nomCompleto,
+                            Grupo = am.NombreGrupo,
+                            TieneTolerancia = am.Matricula == "23301133" || am.Matricula == "23301145"
+                        });
+                    }
+                }
+            }
+            catch { }
+
+            // 2. Alumnos desde la BD
             try
             {
                 var estudiantesDb = await _context.Estudiantes
@@ -94,13 +134,20 @@ namespace Aura.Controllers
 
                 foreach (var e in estudiantesDb)
                 {
-                    if (matriculasAgregadas.Add(e.Matricula))
+                    string nomCompleto = $"{e.Nombre} {e.Apellidos}".Trim();
+                    string normNom = NormalizarTexto(nomCompleto);
+                    string matClean = e.Matricula.Split('@')[0].Trim();
+
+                    bool matNueva = matriculasAgregadas.Add(matClean);
+                    bool nomNuevo = string.IsNullOrEmpty(normNom) || nombresNormalizadosAgregados.Add(normNom);
+
+                    if (matNueva && nomNuevo)
                     {
                         listaCompleta.Add(new AlumnoMonitorDto
                         {
                             IdEstudiante = e.IdEstudiante,
-                            Matricula = e.Matricula,
-                            NombreCompleto = $"{e.Nombre} {e.Apellidos}",
+                            Matricula = matClean,
+                            NombreCompleto = nomCompleto,
                             Grupo = e.Grupo?.NombreGrupo ?? grupo,
                             TieneTolerancia = e.TieneToleranciaActiva
                         });
@@ -109,35 +156,21 @@ namespace Aura.Controllers
             }
             catch { }
 
-            // 2. Alumnos registrados dinámicamente en Secretaría (en memoria)
-            try
-            {
-                foreach (var am in SecretariaController._alumnosMemoria)
-                {
-                    if (matriculasAgregadas.Add(am.Matricula))
-                    {
-                        listaCompleta.Add(new AlumnoMonitorDto
-                        {
-                            IdEstudiante = am.IdEstudiante,
-                            Matricula = am.Matricula,
-                            NombreCompleto = $"{am.Nombre} {am.Apellidos}",
-                            Grupo = am.NombreGrupo,
-                            TieneTolerancia = am.Matricula == "23301133" || am.Matricula == "23301145"
-                        });
-                    }
-                }
-            }
-            catch { }
-
-            // 3. Nómina oficial 9IDGS
+            // 3. Nómina oficial por defecto (Solo se agregan si no fueron sustituidos por Secretaría o BD)
             foreach (var item in grupoOficial9IDGS)
             {
-                if (matriculasAgregadas.Add(item.mat))
+                string normNom = NormalizarTexto(item.nom);
+                string matClean = item.mat.Split('@')[0].Trim();
+
+                bool matNueva = matriculasAgregadas.Add(matClean);
+                bool nomNuevo = nombresNormalizadosAgregados.Add(normNom);
+
+                if (matNueva && nomNuevo)
                 {
                     listaCompleta.Add(new AlumnoMonitorDto
                     {
                         IdEstudiante = item.id,
-                        Matricula = item.mat,
+                        Matricula = matClean,
                         NombreCompleto = item.nom,
                         Grupo = grupo,
                         TieneTolerancia = item.mat == "23301133" || item.mat == "23301145"
@@ -195,7 +228,6 @@ namespace Aura.Controllers
 
             DateTime horaActualMx = ObtenerHoraMexico();
 
-            // Registrar exactamente la matrícula del estudiante que envía el escaneo
             _paseListaEnVivo[rawMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
             _paseListaEnVivo[cleanMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
 

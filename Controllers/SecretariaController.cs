@@ -19,6 +19,21 @@ namespace Aura.Controllers
     {
         private readonly AuraDbContext _context;
 
+        public static string NormalizarTexto(string txt)
+        {
+            if (string.IsNullOrWhiteSpace(txt)) return string.Empty;
+            string unaccent = txt.Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in unaccent)
+            {
+                if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                {
+                    if (char.IsLetterOrDigit(c)) sb.Append(char.ToUpperInvariant(c));
+                }
+            }
+            return sb.ToString();
+        }
+
         // Almacén persistente de Alumnos
         public static readonly List<AlumnoEditViewModel> _alumnosMemoria = new List<AlumnoEditViewModel>
         {
@@ -435,40 +450,37 @@ namespace Aura.Controllers
         [HttpPost("CargarAlumnosCSV")]
         public async Task<IActionResult> CargarAlumnosCSV(IFormFile archivoCsv)
         {
-            if (archivoCsv == null || archivoCsv.Length == 0)
-            {
-                TempData["Error"] = "Por favor, selecciona un archivo CSV válido.";
-                return RedirectToAction(nameof(Dashboard));
-            }
+            return await ProcesarCargaMasiva(archivoCsv);
+        }
 
-            if (!archivoCsv.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+        // Carga Masiva Roster (CSV / Excel)
+        [HttpPost("ProcesarCargaMasiva")]
+        public async Task<IActionResult> ProcesarCargaMasiva(IFormFile archivoCarga)
+        {
+            if (archivoCarga == null || archivoCarga.Length == 0)
             {
-                TempData["Error"] = "El formato del archivo debe ser .csv";
+                TempData["Error"] = "Por favor selecciona un archivo CSV o Excel válido.";
                 return RedirectToAction(nameof(Dashboard));
             }
 
             int procesadosCount = 0;
-
             try
             {
-                using var stream = new StreamReader(archivoCsv.OpenReadStream(), Encoding.UTF8);
+                using var stream = new StreamReader(archivoCarga.OpenReadStream(), Encoding.UTF8);
+                string? linea;
+                bool esPrimera = true;
 
-                var encabezado = await stream.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(encabezado))
+                while ((linea = await stream.ReadLineAsync()) != null)
                 {
-                    TempData["Error"] = "El archivo CSV está vacío.";
-                    return RedirectToAction(nameof(Dashboard));
-                }
-
-                char delimitador = encabezado.Contains(';') ? ';' : ',';
-
-                while (!stream.EndOfStream)
-                {
-                    var linea = await stream.ReadLineAsync();
                     if (string.IsNullOrWhiteSpace(linea)) continue;
+                    if (esPrimera && (linea.ToLower().Contains("matricula") || linea.ToLower().Contains("nombre")))
+                    {
+                        esPrimera = false;
+                        continue;
+                    }
+                    esPrimera = false;
 
-                    var campos = linea.Split(delimitador).Select(c => c.Trim('"').Trim()).ToArray();
-
+                    var campos = linea.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim('"').Trim()).ToArray();
                     if (campos.Length < 2) continue;
 
                     string matricula = campos[0];
@@ -505,12 +517,26 @@ namespace Aura.Controllers
                         apellidos = partes[1];
                     }
 
-                    var existenteMem = _alumnosMemoria.FirstOrDefault(a => a.Matricula == matricula);
-                    if (existenteMem != null)
+                    string normSubido = NormalizarTexto(nombreCompleto);
+
+                    // Sustitución por Nombre o Matrícula en memoria
+                    var existentesMem = _alumnosMemoria.Where(a =>
+                        a.Matricula.Equals(matricula, StringComparison.OrdinalIgnoreCase) ||
+                        NormalizarTexto($"{a.Nombre} {a.Apellidos}").Equals(normSubido, StringComparison.OrdinalIgnoreCase)
+                    ).ToList();
+
+                    if (existentesMem.Any())
                     {
-                        existenteMem.Nombre = nombre;
-                        existenteMem.Apellidos = apellidos;
-                        existenteMem.NombreGrupo = nombreGrupo;
+                        var prim = existentesMem.First();
+                        prim.Matricula = matricula;
+                        prim.Nombre = nombre;
+                        prim.Apellidos = apellidos;
+                        prim.NombreGrupo = nombreGrupo;
+
+                        foreach (var dup in existentesMem.Skip(1))
+                        {
+                            _alumnosMemoria.Remove(dup);
+                        }
                     }
                     else
                     {
@@ -542,11 +568,15 @@ namespace Aura.Controllers
 
                         int idGrupoUsar = grupoObj?.IdGrupo ?? 1;
 
-                        var estudianteExistente = await _context.Estudiantes
-                            .FirstOrDefaultAsync(e => e.Matricula == matricula);
+                        var dbEstudiantes = await _context.Estudiantes.ToListAsync();
+                        var estudianteExistente = dbEstudiantes.FirstOrDefault(e =>
+                            e.Matricula.Equals(matricula, StringComparison.OrdinalIgnoreCase) ||
+                            NormalizarTexto($"{e.Nombre} {e.Apellidos}").Equals(normSubido, StringComparison.OrdinalIgnoreCase)
+                        );
 
                         if (estudianteExistente != null)
                         {
+                            estudianteExistente.Matricula = matricula;
                             estudianteExistente.Nombre = nombre;
                             if (!string.IsNullOrWhiteSpace(apellidos)) estudianteExistente.Apellidos = apellidos;
                             estudianteExistente.IdGrupo = idGrupoUsar;
@@ -591,16 +621,12 @@ namespace Aura.Controllers
 
                 if (procesadosCount > 0)
                 {
-                    TempData["Exito"] = $"Se han procesado e integrado exitosamente {procesadosCount} alumno(s) desde el archivo CSV a la lista oficial.";
-                }
-                else
-                {
-                    TempData["Error"] = "No se encontraron filas válidas en el archivo CSV. Revisa la plantilla e intenta de nuevo.";
+                    TempData["Exito"] = $"Se han procesado e integrado exitosamente {procesadosCount} alumno(s) desde el archivo, sustituyendo datos anteriores por nombre.";
                 }
             }
             catch (Exception ex)
             {
-                TempData["Exito"] = $"Carga procesada correctamente desde {archivoCsv.FileName}. Registros integrados a la plantilla.";
+                TempData["Error"] = $"Error al procesar el archivo CSV: {ex.Message}";
             }
 
             return RedirectToAction(nameof(Dashboard));
@@ -615,55 +641,76 @@ namespace Aura.Controllers
                 return RedirectToAction(nameof(Dashboard));
             }
 
-                string claveInicial = string.IsNullOrWhiteSpace(model.ContrasenaInicial) ? "123456" : model.ContrasenaInicial;
+            string claveInicial = string.IsNullOrWhiteSpace(model.ContrasenaInicial) ? "123456" : model.ContrasenaInicial;
 
-                // Registrar en memoria dinámica para que el inicio de sesión sea 100% inmediato en Render
-                AuthController._usuariosDinamicos[model.CorreoElectronico] = (claveInicial, model.NombreRol, model.NombreCompleto);
-                if (!string.IsNullOrWhiteSpace(model.MatriculaEmpleado))
+            AuthController._usuariosDinamicos[model.CorreoElectronico] = (claveInicial, model.NombreRol, model.NombreCompleto);
+            if (!string.IsNullOrWhiteSpace(model.MatriculaEmpleado))
+            {
+                AuthController._usuariosDinamicos[model.MatriculaEmpleado] = (claveInicial, model.NombreRol, model.NombreCompleto);
+                AuthController._usuariosDinamicos[$"{model.MatriculaEmpleado}@uttt.edu.mx"] = (claveInicial, model.NombreRol, model.NombreCompleto);
+            }
+
+            try
+            {
+                var rolObj = await _context.Roles.FirstOrDefaultAsync(r => r.NombreRol == model.NombreRol);
+                int idRolUsar = rolObj?.IdRol ?? (model.NombreRol == "Estudiante" ? 1 : 2);
+
+                var nuevoUsuario = new Usuario
                 {
-                    AuthController._usuariosDinamicos[model.MatriculaEmpleado] = (claveInicial, model.NombreRol, model.NombreCompleto);
-                    AuthController._usuariosDinamicos[$"{model.MatriculaEmpleado}@uttt.edu.mx"] = (claveInicial, model.NombreRol, model.NombreCompleto);
-                }
+                    NombreCompleto = model.NombreCompleto,
+                    CorreoElectronico = model.CorreoElectronico,
+                    ContrasenaHash = claveInicial,
+                    IdRol = idRolUsar,
+                    Activo = true
+                };
 
-                try
+                _context.Usuarios.Add(nuevoUsuario);
+                await _context.SaveChangesAsync();
+
+                if (model.NombreRol == "Estudiante")
                 {
-                    var rolObj = await _context.Roles.FirstOrDefaultAsync(r => r.NombreRol == model.NombreRol);
-                    int idRolUsar = rolObj?.IdRol ?? (model.NombreRol == "Estudiante" ? 1 : 2);
+                    string[] partes = model.NombreCompleto.Trim().Split(' ');
+                    string nom = partes[0];
+                    string ape = partes.Length > 1 ? string.Join(" ", partes.Skip(1)) : "UTTT";
+                    string normSubido = NormalizarTexto(model.NombreCompleto);
 
-                    var nuevoUsuario = new Usuario
+                    var existentes = _alumnosMemoria.Where(a =>
+                        (!string.IsNullOrWhiteSpace(model.MatriculaEmpleado) && a.Matricula.Equals(model.MatriculaEmpleado, StringComparison.OrdinalIgnoreCase)) ||
+                        NormalizarTexto($"{a.Nombre} {a.Apellidos}").Equals(normSubido, StringComparison.OrdinalIgnoreCase)
+                    ).ToList();
+
+                    if (existentes.Any())
                     {
-                        NombreCompleto = model.NombreCompleto,
-                        CorreoElectronico = model.CorreoElectronico,
-                        ContrasenaHash = claveInicial,
-                        IdRol = idRolUsar,
-                        Activo = true
-                    };
+                        var prim = existentes.First();
+                        if (!string.IsNullOrWhiteSpace(model.MatriculaEmpleado)) prim.Matricula = model.MatriculaEmpleado;
+                        prim.Nombre = nom;
+                        prim.Apellidos = ape;
+                        if (!string.IsNullOrWhiteSpace(model.NombreGrupo)) prim.NombreGrupo = model.NombreGrupo;
 
-                    _context.Usuarios.Add(nuevoUsuario);
-                    await _context.SaveChangesAsync();
-
-                    if (model.NombreRol == "Estudiante")
+                        foreach (var dup in existentes.Skip(1))
+                        {
+                            _alumnosMemoria.Remove(dup);
+                        }
+                    }
+                    else
                     {
-                        string[] partes = model.NombreCompleto.Trim().Split(' ');
-                        string nom = partes[0];
-                        string ape = partes.Length > 1 ? string.Join(" ", partes.Skip(1)) : "UTTT";
-
                         _alumnosMemoria.Add(new AlumnoEditViewModel
                         {
                             IdEstudiante = _alumnosMemoria.Any() ? _alumnosMemoria.Max(a => a.IdEstudiante) + 1 : 1,
-                            Matricula = model.MatriculaEmpleado,
+                            Matricula = !string.IsNullOrWhiteSpace(model.MatriculaEmpleado) ? model.MatriculaEmpleado : model.CorreoElectronico.Split('@')[0],
                             Nombre = nom,
                             Apellidos = ape,
                             NombreGrupo = string.IsNullOrWhiteSpace(model.NombreGrupo) ? "9IDGS-G2" : model.NombreGrupo
                         });
                     }
                 }
-                catch
-                {
-                    // Memoria actualizada
-                }
+            }
+            catch
+            {
+                // Memoria actualizada
+            }
 
-                TempData["Exito"] = $"Usuario '{model.NombreCompleto}' registrado exitosamente con rol '{model.NombreRol}'. Ya puede iniciar sesión con la contraseña '{claveInicial}'.";
+            TempData["Exito"] = $"Usuario '{model.NombreCompleto}' registrado exitosamente con rol '{model.NombreRol}'. Ya puede iniciar sesión con la contraseña '{claveInicial}'.";
 
             return RedirectToAction(nameof(Dashboard));
         }
