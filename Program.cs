@@ -40,6 +40,21 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Sembrado automático de base de datos e inserción de datos iniciales
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AuraDbContext>();
+        DbInitializer.Initialize(context);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Advertencia en Sembrado de BD: " + ex.Message);
+    }
+}
+
 app.UseStaticFiles();
 app.UseRouting();
 
