@@ -72,13 +72,14 @@ namespace Aura.Controllers
                     foreach (var e in estudiantesDb)
                     {
                         var mat = e.Matricula;
+                        string cleanMat = mat.Split('@')[0].Trim();
                         string estadoVal = "PENDIENTE";
                         string horaVal = null;
                         string metodoVal = "-";
 
-                        if (_paseListaEnVivo.ContainsKey(mat))
+                        if (_paseListaEnVivo.ContainsKey(mat) || _paseListaEnVivo.ContainsKey(cleanMat))
                         {
-                            var reg = _paseListaEnVivo[mat];
+                            var reg = _paseListaEnVivo.ContainsKey(cleanMat) ? _paseListaEnVivo[cleanMat] : _paseListaEnVivo[mat];
                             estadoVal = reg.Estado;
                             horaVal = reg.Hora.ToString("hh:mm:ss tt");
                             metodoVal = reg.Metodo;
@@ -111,9 +112,10 @@ namespace Aura.Controllers
                 string horaVal = null;
                 string metodoVal = "-";
 
-                if (_paseListaEnVivo.ContainsKey(item.mat))
+                string cleanMat = item.mat.Split('@')[0].Trim();
+                if (_paseListaEnVivo.ContainsKey(item.mat) || _paseListaEnVivo.ContainsKey(cleanMat))
                 {
-                    var reg = _paseListaEnVivo[item.mat];
+                    var reg = _paseListaEnVivo.ContainsKey(cleanMat) ? _paseListaEnVivo[cleanMat] : _paseListaEnVivo[item.mat];
                     estadoVal = reg.Estado;
                     horaVal = reg.Hora.ToString("hh:mm:ss tt");
                     metodoVal = reg.Metodo;
@@ -144,12 +146,16 @@ namespace Aura.Controllers
                 return BadRequest(new { Mensaje = "La matrícula es requerida." });
             }
 
-            _paseListaEnVivo[dto.Matricula] = ("PRESENTE", DateTime.Now, "Ultrasonido 19.5 kHz");
+            string rawMat = dto.Matricula.Trim();
+            string cleanMat = rawMat.Split('@')[0].Trim();
+
+            _paseListaEnVivo[rawMat] = ("PRESENTE", DateTime.Now, "Ultrasonido 19.5 kHz");
+            _paseListaEnVivo[cleanMat] = ("PRESENTE", DateTime.Now, "Ultrasonido 19.5 kHz");
 
             return Ok(new
             {
                 Exito = true,
-                Mensaje = $"Asistencia ultrasónica registrada correctamente para el alumno con matrícula {dto.Matricula}.",
+                Mensaje = $"Asistencia ultrasónica registrada correctamente para la matrícula {cleanMat}.",
                 HoraRegistro = DateTime.Now.ToString("hh:mm:ss tt")
             });
         }
