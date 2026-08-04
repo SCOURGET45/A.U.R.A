@@ -388,33 +388,19 @@
         const subStatusText = document.getElementById('subStatusText');
         const btn = document.getElementById('btnIniciarEscaneo');
 
+        const matriculaAlumno = '@(Model != null ? Model.Matricula : "23301133")';
+
         try {
-            const resp = await fetch('/api/Asistencia/Registrar', {
+            const resp = await fetch('/api/Asistencia/RegistrarPorMatricula', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    idEstudiante: 1,
-                    idSesion: 1,
-                    horaLlegada: new Date().toISOString()
+                    matricula: matriculaAlumno
                 })
             });
 
             const data = await resp.json();
 
-            resultadoContainer.className = "alert alert-success border-0 shadow-sm mt-3 p-3 text-start";
-            resultadoContainer.innerHTML = `
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-patch-check-fill text-success fs-2"></i>
-                    <div>
-                        <h6 class="fw-bold mb-0">${data.mensaje || '¡Token Validado!'}</h6>
-                        <small>Estado asignado: <strong>${data.estadoFinal || 'Asistencia'}</strong> | Retraso: ${data.minutosRetrasoReales || 0} min.</small>
-                    </div>
-                </div>
-            `;
-            resultadoContainer.classList.remove('d-none');
-            statusText.innerText = "✅ Pase de Lista Confirmado";
-            subStatusText.innerText = "Tu asistencia se sincronizó instantáneamente en el sistema.";
-        } catch (e) {
             resultadoContainer.className = "alert alert-success border-0 shadow-sm mt-3 p-3 text-start";
             resultadoContainer.innerHTML = `
                 <div class="d-flex align-items-center gap-2">

@@ -69,9 +69,12 @@
                     </ul>
 
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-warning text-dark px-3 py-2 fw-bold shadow-sm">
-                            <i class="bi bi-building me-1"></i> UTTT Oficial
-                        </span>
+                        <button type="button" class="btn btn-outline-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalRegistrarUsuario">
+                            <i class="bi bi-person-plus-fill me-1"></i> Registrar Usuario
+                        </button>
+                        <button type="button" class="btn btn-warning btn-sm text-dark fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCambiarPassword">
+                            <i class="bi bi-key-fill me-1"></i> Cambiar Contraseña
+                        </button>
                     </div>
                 </div>
             </div>
@@ -82,6 +85,107 @@
     <main role="main" class="pb-5">
         @RenderBody()
     </main>
+
+    <!-- Modal Registrar Usuario (Secretaría / Director) -->
+    <div class="modal fade" id="modalRegistrarUsuario" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white py-3">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-person-plus-fill text-success me-2"></i>Registrar Nuevo Usuario UTTT
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form asp-controller="Secretaria" asp-action="RegistrarUsuario" method="post">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Nombre Completo</label>
+                            <input type="text" name="NombreCompleto" class="form-control" placeholder="Ej. Alan Santiago Molina" required />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">Correo Institucional</label>
+                                <input type="email" name="CorreoElectronico" class="form-control" placeholder="usuario@uttt.edu.mx" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">Matrícula / Num. Empleado</label>
+                                <input type="text" name="MatriculaEmpleado" class="form-control" placeholder="23301133" required />
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">Rol Asignado</label>
+                                <select name="NombreRol" class="form-select fw-bold border-primary" required>
+                                    <option value="Estudiante">Estudiante</option>
+                                    <option value="Docente">Docente</option>
+                                    <option value="Tutor">Tutor</option>
+                                    <option value="Secretaria">Secretaría</option>
+                                    <option value="Director">Director</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">Grupo (si aplica)</label>
+                                <input type="text" name="NombreGrupo" class="form-control" value="9IDGS-G2" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Contraseña Inicial por Defecto</label>
+                            <input type="text" name="ContrasenaInicial" class="form-control bg-light fw-bold text-primary" value="123456" />
+                            <small class="text-muted" style="font-size: 0.75rem;">El usuario podrá modificar su contraseña al iniciar sesión.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success btn-sm fw-bold px-4">
+                            <i class="bi bi-check-circle me-1"></i> Registrar en Sistema
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cambiar Contraseña (Autogestión Usuario) -->
+    <div class="modal fade" id="modalCambiarPassword" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark py-3">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-shield-lock-fill me-2"></i>Cambiar Contraseña
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form asp-controller="Auth" asp-action="CambiarPassword" method="post">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Correo Institucional</label>
+                            <input type="email" name="Correo" class="form-control" value="docente@uttt.edu.mx" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Contraseña Actual</label>
+                            <input type="password" name="ContrasenaActual" class="form-control" placeholder="••••••••" required />
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">Nueva Contraseña</label>
+                                <input type="password" name="NuevaContrasena" class="form-control" placeholder="Mínimo 6 caract." required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">Confirmar Nueva Contraseña</label>
+                                <input type="password" name="ConfirmarContrasena" class="form-control" placeholder="Confirmar" required />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning btn-sm text-dark fw-bold px-4">
+                            <i class="bi bi-arrow-repeat me-1"></i> Actualizar Contraseña
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer Institucional UTTT -->
     <footer class="footer-uttt py-4 mt-auto">

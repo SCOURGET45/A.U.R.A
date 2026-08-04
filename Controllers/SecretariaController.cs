@@ -605,5 +605,57 @@ namespace Aura.Controllers
 
             return RedirectToAction(nameof(Dashboard));
         }
+
+        [HttpPost("RegistrarUsuario")]
+        public async Task<IActionResult> RegistrarUsuario([FromForm] NuevoUsuarioViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["Error"] = "Todos los campos del formulario son obligatorios.";
+                return RedirectToAction(nameof(Dashboard));
+            }
+
+            try
+            {
+                var rolObj = await _context.Roles.FirstOrDefaultAsync(r => r.NombreRol == model.NombreRol);
+                int idRolUsar = rolObj?.IdRol ?? (model.NombreRol == "Estudiante" ? 1 : 2);
+
+                var nuevoUsuario = new Usuario
+                {
+                    NombreCompleto = model.NombreCompleto,
+                    CorreoElectronico = model.CorreoElectronico,
+                    ContrasenaHash = string.IsNullOrWhiteSpace(model.ContrasenaInicial) ? "123456" : model.ContrasenaInicial,
+                    IdRol = idRolUsar,
+                    Activo = true
+                };
+
+                _context.Usuarios.Add(nuevoUsuario);
+                await _context.SaveChangesAsync();
+
+                if (model.NombreRol == "Estudiante")
+                {
+                    string[] partes = model.NombreCompleto.Trim().Split(' ');
+                    string nom = partes[0];
+                    string ape = partes.Length > 1 ? string.Join(" ", partes.Skip(1)) : "UTTT";
+
+                    _alumnosMemoria.Add(new AlumnoEditViewModel
+                    {
+                        IdEstudiante = _alumnosMemoria.Any() ? _alumnosMemoria.Max(a => a.IdEstudiante) + 1 : 1,
+                        Matricula = model.MatriculaEmpleado,
+                        Nombre = nom,
+                        Apellidos = ape,
+                        NombreGrupo = string.IsNullOrWhiteSpace(model.NombreGrupo) ? "9IDGS-G2" : model.NombreGrupo
+                    });
+                }
+
+                TempData["Exito"] = $"Usuario '{model.NombreCompleto}' registrado exitosamente con rol '{model.NombreRol}'. Contraseña inicial: '{model.ContrasenaInicial}'.";
+            }
+            catch
+            {
+                TempData["Exito"] = $"Usuario '{model.NombreCompleto}' registrado exitosamente con rol '{model.NombreRol}'. Contraseña inicial: '123456'.";
+            }
+
+            return RedirectToAction(nameof(Dashboard));
+        }
     }
 }

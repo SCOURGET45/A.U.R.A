@@ -164,18 +164,52 @@ namespace Aura.Controllers
         [HttpPost("FinalizarPaseLista")]
         public IActionResult FinalizarPaseLista(int semana, int diaSemana, string grupo = "9IDGS-G2")
         {
-            var alumnos = new[] { "23301133", "23301145", "23301199", "23301201", "23301205", "23301210", "23301215" };
+            var listaMatriculas = new[] {
+                "23301133", "23301145", "23301199", "23301201", "23301205", "23301206",
+                "23301210", "23301211", "23301215", "23301216", "23301220", "23301221",
+                "23301225", "23301230", "23301231", "23301235", "23301236", "23301240",
+                "23301241", "23301245", "23301246", "23301250", "23301251", "23301255",
+                "23301256", "23301260"
+            };
 
-            foreach (var mat in alumnos)
+            int presentes = 0;
+            int faltas = 0;
+
+            foreach (var mat in listaMatriculas)
             {
                 string key = $"{mat}_S{semana}_D{diaSemana}";
-                if (!_historialAsistenciasFDC02.ContainsKey(key))
+                if (AsistenciaController._paseListaEnVivo.ContainsKey(mat))
                 {
-                    _historialAsistenciasFDC02[key] = "."; // Asistencia asentada automáticamente
+                    var est = AsistenciaController._paseListaEnVivo[mat].Estado;
+                    if (est == "PRESENTE")
+                    {
+                        _historialAsistenciasFDC02[key] = ".";
+                        presentes++;
+                    }
+                    else if (est == "RETARDO")
+                    {
+                        _historialAsistenciasFDC02[key] = "X";
+                        presentes++;
+                    }
+                    else if (est == "TOLERANCIA_ACTIVA")
+                    {
+                        _historialAsistenciasFDC02[key] = "+=";
+                        presentes++;
+                    }
+                    else
+                    {
+                        _historialAsistenciasFDC02[key] = "/";
+                        faltas++;
+                    }
+                }
+                else
+                {
+                    _historialAsistenciasFDC02[key] = "/"; // Sin escanear = Falta
+                    faltas++;
                 }
             }
 
-            TempData["Exito"] = $"Pase de lista concluido exitosamente para Semana {semana} - Día {diaSemana}. Se asentarón las asistencias en la Sábana Oficial F-DC-02/R5.";
+            TempData["Exito"] = $"Pase de lista de la sesión concluido exitosamente ({presentes} Asistencias, {faltas} Faltas asentadas en Semana {semana} - Día {diaSemana}). Se actualizó el Reporte Oficial F-DC-02/R5.";
             return RedirectToAction(nameof(ReporteSemanal), new { grupo = grupo });
         }
 
