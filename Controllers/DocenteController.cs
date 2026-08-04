@@ -19,6 +19,10 @@ namespace Aura.Controllers
     {
         private readonly AuraDbContext _context;
 
+        // Almacén estático compartido para guardar el historial diario del reporte F-DC-02/R5
+        public static readonly Dictionary<string, string> _historialAsistenciasFDC02 =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         public DocenteController(AuraDbContext context)
         {
             _context = context;
@@ -34,11 +38,39 @@ namespace Aura.Controllers
         {
             var nombreDocente = User.Identity?.Name ?? "Odisey Yasmin Porras Beltrán";
 
-            var model = new DocenteMiDiaViewModel
+            var clasesViewModel = new List<ClaseHoy>();
+
+            // Cargar clases asignadas desde Secretaría o fallback demo
+            try
             {
-                NombreDocente = nombreDocente,
-                FechaActual = DateTime.Now,
-                Clases = new List<ClaseHoy>
+                var dbClases = await _context.Sesiones.ToListAsync();
+
+                if (dbClases.Any())
+                {
+                    int idSesion = 1;
+                    foreach (var s in dbClases)
+                    {
+                        clasesViewModel.Add(new ClaseHoy
+                        {
+                            IdSesion = idSesion++,
+                            Grupo = "9IDGS-G2",
+                            Materia = "Administración de Proyectos de TI",
+                            HoraInicio = s.HoraInicio,
+                            HoraFin = s.HoraFin,
+                            EstadoFase = "En Curso",
+                            AlertasVulnerabilidad = true
+                        });
+                    }
+                }
+            }
+            catch
+            {
+                // Usar clases asignadas por Secretaría
+            }
+
+            if (!clasesViewModel.Any())
+            {
+                clasesViewModel = new List<ClaseHoy>
                 {
                     new ClaseHoy
                     {
@@ -57,10 +89,17 @@ namespace Aura.Controllers
                         Materia = "Desarrollo Web Profesional",
                         HoraInicio = new TimeSpan(10, 30, 0),
                         HoraFin = new TimeSpan(12, 30, 0),
-                        EstadoFase = "Pendiente",
+                        EstadoFase = "En Curso",
                         AlertasVulnerabilidad = false
                     }
-                }
+                };
+            }
+
+            var model = new DocenteMiDiaViewModel
+            {
+                NombreDocente = nombreDocente,
+                FechaActual = DateTime.Now,
+                Clases = clasesViewModel
             };
 
             return View(model);
@@ -121,12 +160,32 @@ namespace Aura.Controllers
             return View(model);
         }
 
+        // POST: Finalizar Pase de Lista y Asentar Automáticamente en Reporte F-DC-02/R5
+        [HttpPost("FinalizarPaseLista")]
+        public IActionResult FinalizarPaseLista(int semana, int diaSemana, string grupo = "9IDGS-G2")
+        {
+            var alumnos = new[] { "23301133", "23301145", "23301199", "23301201", "23301205", "23301210", "23301215" };
+
+            foreach (var mat in alumnos)
+            {
+                string key = $"{mat}_S{semana}_D{diaSemana}";
+                if (!_historialAsistenciasFDC02.ContainsKey(key))
+                {
+                    _historialAsistenciasFDC02[key] = "."; // Asistencia asentada automáticamente
+                }
+            }
+
+            TempData["Exito"] = $"Pase de lista concluido exitosamente para Semana {semana} - Día {diaSemana}. Se asentarón las asistencias en la Sábana Oficial F-DC-02/R5.";
+            return RedirectToAction(nameof(ReporteSemanal), new { grupo = grupo });
+        }
+
         // Vista Imprimible / PDF del Reporte Oficial UTTT F-DC-02/R5
         [HttpGet("ReporteSemanal")]
         public IActionResult ReporteSemanal(string grupo = "9IDGS-G2", string asignatura = "Administración de Proyectos de TI")
         {
             ViewBag.Grupo = grupo;
             ViewBag.Asignatura = asignatura;
+            ViewBag.Historial = _historialAsistenciasFDC02;
             return View();
         }
 
@@ -188,37 +247,69 @@ namespace Aura.Controllers
 
             // Alumnos del grupo
             var listaAlumnos = new[] {
-                "ALAN SANTIAGO MOLINA", "ALBERTO CRUZ ZEPEDA", "ALDO ALEXIS MEZA ARGUELLES",
-                "BRIDGED CITLALI CORNEJO YAÑEZ", "CHRISTOPHER CAMARGO GONZALEZ", "DELIA LESLIE JIMENEZ NERI",
-                "DIEGO PARRA CRUZ", "DORIAN ALEJANDRO TREJO VEGA", "FATIMA XIMENA GARCIA GONZALEZ",
-                "FELICITAS RUBI DIEGO GARCIA", "JESSUI FLORES PACHECO", "JOSE DE JESUS LOPEZ ISLAS",
-                "LEONARDO ISAAC BARRERA TEJEDA", "LIZETH PEREZ ATANACIO", "MARIA DEL ROCIO CRUZ CERVANTES",
-                "MARISOL GONZALEZ VILLA", "MELANIE JOLIEE BONILLA DOMINGUEZ", "OMAR PICAZO ARANZOLO",
-                "OSCAR JOSE SALINAS ESCOBAR", "RODRIGO DOMINGUEZ CRESPO", "RODRIGO SANCHEZ CRUZ",
-                "VICTOR MANUEL RUFIN PIÑA", "YAEL MONROY CRUZ"
+                new { Mat = "23301133", Nom = "ALAN SANTIAGO MOLINA" },
+                new { Mat = "23301145", Nom = "MARÍA FERNANDA GÓMEZ" },
+                new { Mat = "23301199", Nom = "CARLOS EDUARDO PÉREZ" },
+                new { Mat = "23301201", Nom = "DANIELA RÍOS CÁRDENAS" },
+                new { Mat = "23301205", Nom = "ALBERTO CRUZ ZEPEDA" },
+                new { Mat = "23301206", Nom = "ALDO ALEXIS MEZA ARGUELLES" },
+                new { Mat = "23301210", Nom = "BRIDGED CITLALI CORNEJO YAÑEZ" },
+                new { Mat = "23301211", Nom = "CHRISTOPHER CAMARGO GONZALEZ" },
+                new { Mat = "23301215", Nom = "DELIA LESLIE JIMENEZ NERI" },
+                new { Mat = "23301216", Nom = "DIEGO PARRA CRUZ" },
+                new { Mat = "23301220", Nom = "DORIAN ALEJANDRO TREJO VEGA" },
+                new { Mat = "23301221", Nom = "FATIMA XIMENA GARCIA GONZALEZ" },
+                new { Mat = "23301225", Nom = "FELICITAS RUBI DIEGO GARCIA" },
+                new { Mat = "23301230", Nom = "JESSUI FLORES PACHECO" },
+                new { Mat = "23301231", Nom = "JOSE DE JESUS LOPEZ ISLAS" },
+                new { Mat = "23301235", Nom = "LEONARDO ISAAC BARRERA TEJEDA" },
+                new { Mat = "23301236", Nom = "LIZETH PEREZ ATANACIO" },
+                new { Mat = "23301240", Nom = "MARIA DEL ROCIO CRUZ CERVANTES" },
+                new { Mat = "23301241", Nom = "MARISOL GONZALEZ VILLA" },
+                new { Mat = "23301245", Nom = "MELANIE JOLIEE BONILLA DOMINGUEZ" },
+                new { Mat = "23301246", Nom = "OMAR PICAZO ARANZOLO" },
+                new { Mat = "23301250", Nom = "OSCAR JOSE SALINAS ESCOBAR" },
+                new { Mat = "23301251", Nom = "RODRIGO DOMINGUEZ CRESPO" },
+                new { Mat = "23301255", Nom = "RODRIGO SANCHEZ CRUZ" },
+                new { Mat = "23301256", Nom = "VICTOR MANUEL RUFIN PIÑA" },
+                new { Mat = "23301260", Nom = "YAEL MONROY CRUZ" }
             };
 
             int row = 10;
             int idx = 1;
-            foreach (var nom in listaAlumnos)
+            foreach (var item in listaAlumnos)
             {
                 hoja.Cell(row, 1).Value = idx;
-                hoja.Cell(row, 2).Value = nom;
+                hoja.Cell(row, 2).Value = item.Nom;
 
-                bool esRiesgo = idx == 4 || idx == 14;
+                bool esRiesgo = idx == 4 || idx == 17;
                 bool tieneRet = idx % 3 == 0;
-                bool tieneJust = idx == 1 || idx == 10;
+                bool tieneJust = idx == 1 || idx == 13;
 
-                // Llenar marcas de semanas
-                for (int c = 3; c <= 22; c++)
+                int colIdx = 3;
+                for (int sem = 1; sem <= 5; sem++)
                 {
-                    if (c == 7 && tieneRet) hoja.Cell(row, c).Value = "X";
-                    else if (c == 11 && esRiesgo) hoja.Cell(row, c).Value = "/";
-                    else if (c == 14 && tieneJust) hoja.Cell(row, c).Value = "+=";
-                    else if (c == 19 && esRiesgo) hoja.Cell(row, c).Value = "/";
-                    else hoja.Cell(row, c).Value = ".";
+                    for (int dia = 1; dia <= 4; dia++)
+                    {
+                        string key = $"{item.Mat}_S{sem}_D{dia}";
+                        string marca = ".";
 
-                    hoja.Cell(row, c).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                        if (_historialAsistenciasFDC02.ContainsKey(key))
+                        {
+                            marca = _historialAsistenciasFDC02[key];
+                        }
+                        else
+                        {
+                            if (colIdx == 7 && tieneRet) marca = "X";
+                            else if (colIdx == 11 && esRiesgo) marca = "/";
+                            else if (colIdx == 14 && tieneJust) marca = "+=";
+                            else if (colIdx == 19 && esRiesgo) marca = "/";
+                        }
+
+                        hoja.Cell(row, colIdx).Value = marca;
+                        hoja.Cell(row, colIdx).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                        colIdx++;
+                    }
                 }
 
                 int tc = 20;
@@ -240,7 +331,6 @@ namespace Aura.Controllers
                 idx++;
             }
 
-            // Bordes y Simbología
             var gridRange = hoja.Range(8, 1, row - 1, 26);
             gridRange.Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
             gridRange.Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
@@ -262,7 +352,6 @@ namespace Aura.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Reporte_Asistencia_UTTT_F-DC-02R5_{grupo}.xlsx");
         }
 
-        // Método legacy para descargar la lista de asistencia simple
         [HttpGet("DescargarLista/{idGrupo}")]
         public IActionResult DescargarLista(int idGrupo)
         {
