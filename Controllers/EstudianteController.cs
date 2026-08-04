@@ -28,6 +28,8 @@ namespace Aura.Controllers
             var viewModel = new EstudianteDashboardViewModel();
 
             string userEmail = User.Identity?.Name ?? string.Empty;
+            string matriculaClean = !string.IsNullOrEmpty(userEmail) ? userEmail.Split('@')[0].Trim() : string.Empty;
+
             var idUsuarioStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             int idUsuario = 0;
             if (!string.IsNullOrEmpty(idUsuarioStr))
@@ -46,19 +48,11 @@ namespace Aura.Controllers
                         .FirstOrDefaultAsync(e => e.IdUsuario == idUsuario);
                 }
 
-                if (estudiante == null && !string.IsNullOrEmpty(userEmail))
-                {
-                    string matriculaBuscada = userEmail.Split('@')[0];
-                    estudiante = await _context.Estudiantes
-                        .Include(e => e.Grupo)
-                        .FirstOrDefaultAsync(e => e.Matricula == matriculaBuscada || e.Matricula == userEmail);
-                }
-
-                if (estudiante == null)
+                if (estudiante == null && !string.IsNullOrEmpty(matriculaClean))
                 {
                     estudiante = await _context.Estudiantes
                         .Include(e => e.Grupo)
-                        .FirstOrDefaultAsync();
+                        .FirstOrDefaultAsync(e => e.Matricula == matriculaClean || e.Matricula == userEmail);
                 }
 
                 if (estudiante != null)
@@ -67,7 +61,6 @@ namespace Aura.Controllers
                     viewModel.Matricula = estudiante.Matricula;
                     viewModel.NombreGrupo = estudiante.Grupo?.NombreGrupo ?? "9IDGS-G2";
 
-                    // Consultar vulnerabilidad aprobada
                     var vulnerabilidad = await _context.SolicitudesVulnerabilidad
                         .Where(s => s.IdEstudiante == estudiante.IdEstudiante && s.Estado == "Aprobado")
                         .OrderByDescending(s => s.FechaCreacion)
@@ -86,84 +79,65 @@ namespace Aura.Controllers
                         viewModel.MotivoTolerancia = estudiante.TieneToleranciaActiva ? "Tolerancia Institucional" : string.Empty;
                     }
 
-                    // Justificantes
                     var justificantes = await _context.Justificantes
                         .Where(j => j.IdEstudiante == estudiante.IdEstudiante)
                         .ToListAsync();
 
                     viewModel.JustificantesUsados = justificantes.Count;
                     viewModel.DiasAmparados = justificantes.Sum(j => j.DiasAmparados);
-
-                    // Materias y asistencias con verificación segura contra nulos
-                    var asistencias = await _context.Asistencias
-                        .Include(a => a.Sesion)
-                        .Where(a => a.IdEstudiante == estudiante.IdEstudiante)
-                        .ToListAsync();
-
-                    if (asistencias.Any())
-                    {
-                        var gruposSesiones = asistencias.Where(a => a.Sesion != null).GroupBy(a => a.Sesion.IdGrupo);
-                        var materiasList = new List<UnidadDashboardViewModel>();
-
-                        foreach (var grupo in gruposSesiones)
-                        {
-                            int totalClases = Math.Max(grupo.Count(), 20);
-                            int retardos = grupo.Count(a => a.Estado == "Retardo");
-                            int faltasDirectas = grupo.Count(a => a.Estado == "Falta");
-                            int faltasPorRetardo = retardos / 3;
-                            int faltasTotales = faltasDirectas + faltasPorRetardo;
-                            int clasesAsistidas = totalClases - faltasTotales;
-
-                            double porcentaje = Math.Round(((double)clasesAsistidas / totalClases) * 100, 1);
-                            int limiteFaltas = (int)Math.Floor(totalClases * 0.20);
-                            int faltasRestantes = Math.Max(0, limiteFaltas - faltasTotales);
-
-                            string semaforo = "Verde";
-                            if (porcentaje < 80) semaforo = "Rojo";
-                            else if (porcentaje < 90) semaforo = "Amarillo";
-
-                            materiasList.Add(new UnidadDashboardViewModel
-                            {
-                                NombreMateria = "Materia General",
-                                UnidadActual = "Unidad II: Evaluaciones",
-                                PorcentajeAsistencia = porcentaje,
-                                Semaforo = semaforo,
-                                FaltasAcumuladas = faltasTotales,
-                                FaltasPermitidasRestantes = faltasRestantes,
-                                LimiteFaltasTotal = limiteFaltas,
-                                RetardosAcumulados = retardos,
-                                TotalClasesUnidad = totalClases,
-                                ClasesAsistidas = clasesAsistidas
-                            });
-                        }
-
-                        if (materiasList.Any())
-                        {
-                            viewModel.MateriasActivas = materiasList;
-                            viewModel.AsistenciaGlobal = Math.Round(materiasList.Average(m => m.PorcentajeAsistencia), 1);
-                            viewModel.AlertasRiesgoCount = materiasList.Count(m => m.PorcentajeAsistencia < 80);
-                        }
-                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Advertencia en EstudianteController: " + ex.Message);
+                Console.WriteLine("Advertencia BD en EstudianteController: " + ex.Message);
             }
 
-            // Si la consulta no devolvió materias o datos, garantizamos que el modelo quede 100% poblado sin pantalla en blanco
+            // Buscar en memoria de Secretaría si no se encontró en la BD
             if (string.IsNullOrEmpty(viewModel.NombreAlumno))
             {
-                viewModel.NombreAlumno = !string.IsNullOrEmpty(userEmail) ? userEmail.Split('@')[0].ToUpper() : "ALAN SANTIAGO MOLINA";
-                viewModel.Matricula = !string.IsNullOrEmpty(userEmail) ? userEmail.Split('@')[0] : "23301133";
+                var alumnoMem = SecretariaController._alumnosMemoria
+                    .FirstOrDefault(a => a.Matricula.Equals(matriculaClean, StringComparison.OrdinalIgnoreCase) || a.Matricula.Equals(userEmail, StringComparison.OrdinalIgnoreCase));
+
+                if (alumnoMem != null)
+                {
+                    viewModel.NombreAlumno = $"{alumnoMem.Nombre} {alumnoMem.Apellidos}";
+                    viewModel.Matricula = alumnoMem.Matricula;
+                    viewModel.NombreGrupo = alumnoMem.NombreGrupo;
+                }
+            }
+
+            // Fallback por matrícula específica en caso de ser un usuario de demostración
+            if (string.IsNullOrEmpty(viewModel.NombreAlumno))
+            {
+                switch (matriculaClean)
+                {
+                    case "23301145":
+                        viewModel.NombreAlumno = "MARÍA FERNANDA GÓMEZ";
+                        viewModel.Matricula = "23301145";
+                        break;
+                    case "23301199":
+                        viewModel.NombreAlumno = "CARLOS EDUARDO PÉREZ";
+                        viewModel.Matricula = "23301199";
+                        break;
+                    case "23301201":
+                        viewModel.NombreAlumno = "DANIELA RÍOS CÁRDENAS";
+                        viewModel.Matricula = "23301201";
+                        break;
+                    default:
+                        viewModel.NombreAlumno = !string.IsNullOrEmpty(userEmail) && userEmail.Contains("@") ? userEmail.Split('@')[0].ToUpper() : "ALAN SANTIAGO MOLINA";
+                        viewModel.Matricula = !string.IsNullOrEmpty(matriculaClean) ? matriculaClean : "23301133";
+                        break;
+                }
+
                 viewModel.NombreGrupo = "9IDGS-G2";
-                viewModel.TieneToleranciaActiva = true;
-                viewModel.MinutosTolerancia = 30;
-                viewModel.MotivoTolerancia = "Distancia Extrema (Transporte)";
+                viewModel.TieneToleranciaActiva = viewModel.Matricula == "23301133" || viewModel.Matricula == "23301145";
+                viewModel.MinutosTolerancia = viewModel.TieneToleranciaActiva ? 30 : 0;
+                viewModel.MotivoTolerancia = viewModel.TieneToleranciaActiva ? "Tolerancia Institucional (+30m)" : string.Empty;
                 viewModel.JustificantesUsados = 1;
                 viewModel.DiasAmparados = 3;
             }
 
+            // Poblado de materias para el panel del estudiante
             if (!viewModel.MateriasActivas.Any())
             {
                 viewModel.MateriasActivas = new List<UnidadDashboardViewModel>

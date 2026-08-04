@@ -20,7 +20,7 @@ namespace Aura.Controllers
         private readonly AuraDbContext _context;
 
         // Almacén persistente de Alumnos
-        private static readonly List<AlumnoEditViewModel> _alumnosMemoria = new List<AlumnoEditViewModel>
+        public static readonly List<AlumnoEditViewModel> _alumnosMemoria = new List<AlumnoEditViewModel>
         {
             new AlumnoEditViewModel { IdEstudiante = 1, Matricula = "23301133", Nombre = "Alan Santiago", Apellidos = "Molina", NombreGrupo = "9IDGS-G2" },
             new AlumnoEditViewModel { IdEstudiante = 2, Matricula = "23301145", Nombre = "María Fernanda", Apellidos = "Gómez", NombreGrupo = "9IDGS-G1" },

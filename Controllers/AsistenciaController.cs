@@ -80,8 +80,11 @@ namespace Aura.Controllers
                 new { id = 26, mat = "23301260", nom = "YAEL MONROY CRUZ" }
             };
 
-            var estudiantesResult = new List<object>();
+            // Estructura unificada de alumnos
+            var listaCompleta = new List<AlumnoMonitorDto>();
+            var matriculasAgregadas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            // 1. Alumnos desde la BD
             try
             {
                 var estudiantesDb = await _context.Estudiantes
@@ -89,55 +92,74 @@ namespace Aura.Controllers
                     .Where(e => e.Grupo == null || e.Grupo.NombreGrupo == grupo || grupo == "9IDGS-G2")
                     .ToListAsync();
 
-                if (estudiantesDb.Any())
+                foreach (var e in estudiantesDb)
                 {
-                    foreach (var e in estudiantesDb)
+                    if (matriculasAgregadas.Add(e.Matricula))
                     {
-                        var mat = e.Matricula;
-                        string cleanMat = mat.Split('@')[0].Trim();
-                        string estadoVal = "PENDIENTE";
-                        string horaVal = null;
-                        string metodoVal = "-";
-
-                        if (_paseListaEnVivo.ContainsKey(mat) || _paseListaEnVivo.ContainsKey(cleanMat))
+                        listaCompleta.Add(new AlumnoMonitorDto
                         {
-                            var reg = _paseListaEnVivo.ContainsKey(cleanMat) ? _paseListaEnVivo[cleanMat] : _paseListaEnVivo[mat];
-                            estadoVal = reg.Estado;
-                            horaVal = reg.Hora.ToString("hh:mm:ss tt");
-                            metodoVal = reg.Metodo;
-                        }
-
-                        estudiantesResult.Add(new
-                        {
-                            idEstudiante = e.IdEstudiante,
-                            matricula = e.Matricula,
-                            nombreCompleto = $"{e.Nombre} {e.Apellidos}",
-                            grupo = e.Grupo != null ? e.Grupo.NombreGrupo : grupo,
-                            estado = estadoVal,
-                            horaMarcado = horaVal,
-                            metodo = metodoVal,
-                            tieneTolerancia = e.TieneToleranciaActiva
+                            IdEstudiante = e.IdEstudiante,
+                            Matricula = e.Matricula,
+                            NombreCompleto = $"{e.Nombre} {e.Apellidos}",
+                            Grupo = e.Grupo?.NombreGrupo ?? grupo,
+                            TieneTolerancia = e.TieneToleranciaActiva
                         });
                     }
-
-                    return Ok(estudiantesResult);
                 }
             }
-            catch
-            {
-                // Usar lista oficial
-            }
+            catch { }
 
+            // 2. Alumnos registrados dinámicamente en Secretaría (en memoria)
+            try
+            {
+                foreach (var am in SecretariaController._alumnosMemoria)
+                {
+                    if (matriculasAgregadas.Add(am.Matricula))
+                    {
+                        listaCompleta.Add(new AlumnoMonitorDto
+                        {
+                            IdEstudiante = am.IdEstudiante,
+                            Matricula = am.Matricula,
+                            NombreCompleto = $"{am.Nombre} {am.Apellidos}",
+                            Grupo = am.NombreGrupo,
+                            TieneTolerancia = am.Matricula == "23301133" || am.Matricula == "23301145"
+                        });
+                    }
+                }
+            }
+            catch { }
+
+            // 3. Nómina oficial 9IDGS
             foreach (var item in grupoOficial9IDGS)
             {
+                if (matriculasAgregadas.Add(item.mat))
+                {
+                    listaCompleta.Add(new AlumnoMonitorDto
+                    {
+                        IdEstudiante = item.id,
+                        Matricula = item.mat,
+                        NombreCompleto = item.nom,
+                        Grupo = grupo,
+                        TieneTolerancia = item.mat == "23301133" || item.mat == "23301145"
+                    });
+                }
+            }
+
+            // Construir respuesta en vivo
+            var estudiantesResult = new List<object>();
+
+            foreach (var alumno in listaCompleta)
+            {
+                string rawMat = alumno.Matricula.Trim();
+                string cleanMat = rawMat.Split('@')[0].Trim();
+
                 string estadoVal = "PENDIENTE";
                 string horaVal = null;
                 string metodoVal = "-";
 
-                string cleanMat = item.mat.Split('@')[0].Trim();
-                if (_paseListaEnVivo.ContainsKey(item.mat) || _paseListaEnVivo.ContainsKey(cleanMat))
+                if (_paseListaEnVivo.ContainsKey(rawMat) || _paseListaEnVivo.ContainsKey(cleanMat))
                 {
-                    var reg = _paseListaEnVivo.ContainsKey(cleanMat) ? _paseListaEnVivo[cleanMat] : _paseListaEnVivo[item.mat];
+                    var reg = _paseListaEnVivo.ContainsKey(rawMat) ? _paseListaEnVivo[rawMat] : _paseListaEnVivo[cleanMat];
                     estadoVal = reg.Estado;
                     horaVal = reg.Hora.ToString("hh:mm:ss tt");
                     metodoVal = reg.Metodo;
@@ -145,21 +167,21 @@ namespace Aura.Controllers
 
                 estudiantesResult.Add(new
                 {
-                    idEstudiante = item.id,
-                    matricula = item.mat,
-                    nombreCompleto = item.nom,
-                    grupo = grupo,
+                    idEstudiante = alumno.IdEstudiante,
+                    matricula = alumno.Matricula,
+                    nombreCompleto = alumno.NombreCompleto,
+                    grupo = alumno.Grupo,
                     estado = estadoVal,
                     horaMarcado = horaVal,
                     metodo = metodoVal,
-                    tieneTolerancia = item.mat == "23301133" || item.mat == "23301145"
+                    tieneTolerancia = alumno.TieneTolerancia
                 });
             }
 
             return Ok(estudiantesResult);
         }
 
-        // Endpoint POST: Registrar Asistencia por Matrícula Real desde el Teléfono Móvil
+        // Endpoint POST: Registrar Asistencia por Matrícula Real desde el Teléfono Móvil del Alumno Específico
         [HttpPost("RegistrarPorMatricula")]
         public IActionResult RegistrarPorMatricula([FromBody] RegistrarMatriculaDto dto)
         {
@@ -171,22 +193,16 @@ namespace Aura.Controllers
             string rawMat = dto.Matricula.Trim();
             string cleanMat = rawMat.Split('@')[0].Trim();
 
-            // Mapeo inteligente si el usuario entra con correo genérico
-            if (!cleanMat.All(char.IsDigit) || cleanMat.Length < 4)
-            {
-                cleanMat = "23301133";
-            }
-
             DateTime horaActualMx = ObtenerHoraMexico();
 
+            // Registrar exactamente la matrícula del estudiante que envía el escaneo
             _paseListaEnVivo[rawMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
             _paseListaEnVivo[cleanMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
-            _paseListaEnVivo["23301133"] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
 
             return Ok(new
             {
                 Exito = true,
-                Mensaje = $"Asistencia ultrasónica registrada correctamente para la matrícula {cleanMat}.",
+                Mensaje = $"Asistencia ultrasónica registrada correctamente para el alumno con matrícula {cleanMat}.",
                 HoraRegistro = horaActualMx.ToString("hh:mm:ss tt")
             });
         }
@@ -198,9 +214,10 @@ namespace Aura.Controllers
             if (string.IsNullOrWhiteSpace(dto.Matricula)) return BadRequest("Matrícula requerida.");
 
             DateTime horaActualMx = ObtenerHoraMexico();
-            string cleanMat = dto.Matricula.Split('@')[0].Trim();
+            string rawMat = dto.Matricula.Trim();
+            string cleanMat = rawMat.Split('@')[0].Trim();
 
-            _paseListaEnVivo[dto.Matricula] = (dto.NuevoEstado, horaActualMx, "Manual Docente");
+            _paseListaEnVivo[rawMat] = (dto.NuevoEstado, horaActualMx, "Manual Docente");
             _paseListaEnVivo[cleanMat] = (dto.NuevoEstado, horaActualMx, "Manual Docente");
 
             return Ok(new { Mensaje = $"Estado de asistencia actualizado a {dto.NuevoEstado} para {cleanMat}." });
@@ -220,6 +237,15 @@ namespace Aura.Controllers
                 MinutosRetrasoReales = 0
             });
         }
+    }
+
+    public class AlumnoMonitorDto
+    {
+        public int IdEstudiante { get; set; }
+        public string Matricula { get; set; } = string.Empty;
+        public string NombreCompleto { get; set; } = string.Empty;
+        public string Grupo { get; set; } = string.Empty;
+        public bool TieneTolerancia { get; set; }
     }
 
     public class RegistrarMatriculaDto
