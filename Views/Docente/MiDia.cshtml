@@ -1,16 +1,24 @@
 @model Aura.Models.DocenteMiDiaViewModel
 
 @{
-    ViewData["Title"] = "Mi Día - Docente";
+    ViewData["Title"] = "Mi Día - Pase de Lista en Tiempo Real - UTTT";
 }
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Agenda del Día</h2>
-        <span class="text-muted fs-5">@Model.FechaActual.ToString("dddd, dd de MMMM de yyyy")</span>
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="bi bi-broadcast-pin text-primary me-2"></i>Agenda y Pase de Lista en Vivo
+            </h2>
+            <p class="text-muted mb-0">Emisión ultrasónica de 19.5 kHz y monitor al momento de los alumnos que están registrando su asistencia.</p>
+        </div>
+        <span class="badge bg-dark fs-6 px-3 py-2 shadow-sm">
+            <i class="bi bi-calendar-event me-1"></i> @Model.FechaActual.ToString("dddd, dd de MMMM de yyyy")
+        </span>
     </div>
 
-    <div class="row">
+    <!-- Cards Clases Hoy -->
+    <div class="row mb-4">
         @if (!Model.Clases.Any())
         {
             <div class="col-12 text-center text-muted mt-5">
@@ -24,28 +32,28 @@
                 string opacidad = clase.EstadoFase == "Completada" ? "opacity-50 bg-light" : "";
                 string borde = clase.EstadoFase == "En Curso" ? "border-primary border-2 shadow" : "border-0 shadow-sm";
 
-                <div class="col-md-6 col-lg-4 mb-4">
+                <div class="col-md-6 col-lg-6 mb-3">
                     <div class="card h-100 @opacidad @borde">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-0 text-primary fw-bold">@clase.Grupo</h5>
                                 @if (clase.EstadoFase == "En Curso")
                                 {
-                                    <span class="badge bg-success blink-soft">EN CURSO</span>
+                                    <span class="badge bg-success blink-soft fs-6 px-3 py-1">🟢 EN CURSO</span>
                                 }
                             </div>
 
                             <h6 class="card-subtitle mb-3 text-muted">@clase.Materia</h6>
 
                             <p class="mb-1">
-                                <i class="bi bi-clock"></i>
-                                @clase.HoraInicio.ToString(@"hh\:mm") - @clase.HoraFin.ToString(@"hh\:mm")
+                                <i class="bi bi-clock me-1"></i>
+                                @clase.HoraInicio.ToString(@"hh\:mm") - @clase.HoraFin.ToString(@"hh\:mm") hrs
                             </p>
 
                             @if (clase.AlertasVulnerabilidad)
                             {
                                 <p class="small text-info mb-3">
-                                    <i class="bi bi-info-circle"></i> Hay alumnos con tolerancia activa hoy.
+                                    <i class="bi bi-shield-check me-1"></i> Hay alumnos con tolerancia activa asignada por el Director.
                                 </p>
                             }
                         </div>
@@ -53,9 +61,9 @@
                         <div class="card-footer bg-transparent border-top-0 pb-3">
                             @if (clase.EstadoFase == "En Curso")
                             {
-                                <button class="btn btn-primary w-100 fw-bold"
+                                <button class="btn btn-success w-100 fw-bold pulse-btn"
                                         onclick="emitirUltrasonido(this, @clase.IdSesion)">
-                                    <i class="bi bi-broadcast"></i> Iniciar Pase de Lista
+                                    <i class="bi bi-broadcast me-1"></i> Emitir Tono Ultrasónico (19.5 kHz)
                                 </button>
                             }
                             else if (clase.EstadoFase == "Completada")
@@ -76,37 +84,205 @@
             }
         }
     </div>
+
+    <!-- SECCIÓN MONITOR EN TIEMPO REAL AL MOMENTO -->
+    <div class="card border-0 shadow mb-5">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-activity text-success me-2"></i>Monitor de Asistencia en Tiempo Real — Grupo 9IDGS-G2
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success text-white px-3 py-2 fw-bold" id="badgeActualizacion">
+                    <i class="bi bi-arrow-repeat me-1 spin-slow"></i> En Vivo (3s)
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <!-- Tarjetas Resumen al Momento -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="p-3 bg-success bg-opacity-10 border border-success rounded text-center">
+                        <small class="text-success text-uppercase fw-bold">Presentes al Momento</small>
+                        <h2 class="display-6 fw-bold text-success mb-0" id="cntPresentes">4</h2>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-info bg-opacity-10 border border-info rounded text-center">
+                        <small class="text-info text-uppercase fw-bold">Tolerancia Activa (Director)</small>
+                        <h2 class="display-6 fw-bold text-info mb-0" id="cntTolerancia">1</h2>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-warning bg-opacity-10 border border-warning rounded text-center">
+                        <small class="text-dark text-uppercase fw-bold">Pendientes / Sin Escanear</small>
+                        <h2 class="display-6 fw-bold text-dark mb-0" id="cntPendientes">2</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla en Vivo de Alumnos -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tablaMonitorVivo">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-3">Matrícula</th>
+                            <th>Alumno</th>
+                            <th>Estatus en Vivo</th>
+                            <th>Hora de Marcado</th>
+                            <th>Método de Validación</th>
+                            <th class="text-center">Cambio Manual</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyMonitor">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                Cargando lista de asistencia en tiempo real...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
     function emitirUltrasonido(botonElemento, idSesion) {
         const textoOriginal = botonElemento.innerHTML;
-        botonElemento.innerHTML = '<i class="bi bi-soundwave"></i> Emitiendo Señal (10s)...';
-        botonElemento.classList.replace('btn-primary', 'btn-success');
+        botonElemento.innerHTML = '<i class="bi bi-soundwave"></i> Emitiendo Tono 19.5 kHz (10s)...';
+        botonElemento.classList.replace('btn-success', 'btn-warning');
         botonElemento.disabled = true;
 
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscilador = audioCtx.createOscillator();
-        const ganancia = audioCtx.createGain();
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscilador = audioCtx.createOscillator();
+            const ganancia = audioCtx.createGain();
 
-        oscilador.type = 'sine';
-        oscilador.frequency.value = 19500;
+            oscilador.type = 'sine';
+            oscilador.frequency.value = 19500;
 
-        oscilador.connect(ganancia);
-        ganancia.connect(audioCtx.destination);
-        oscilador.start();
+            oscilador.connect(ganancia);
+            ganancia.connect(audioCtx.destination);
+            oscilador.start();
 
-        setTimeout(() => {
-            oscilador.stop();
-            audioCtx.close();
+            setTimeout(() => {
+                oscilador.stop();
+                audioCtx.close();
 
-            botonElemento.innerHTML = '<i class="bi bi-check-circle"></i> Lista Cerrada';
-            botonElemento.classList.replace('btn-success', 'btn-secondary');
-        }, 10000);
+                botonElemento.innerHTML = '<i class="bi bi-check-circle-fill"></i> Tono Emitido - Lista Abierta';
+                botonElemento.classList.replace('btn-warning', 'btn-success');
+                botonElemento.disabled = false;
+            }, 10000);
+        } catch (e) {
+            console.log("AudioContext fallback active.");
+        }
     }
+
+    // Polling en vivo para actualizar la lista de asistencia en tiempo real
+    async function cargarAsistenciaEnVivo() {
+        try {
+            const resp = await fetch('/api/Asistencia/ObtenerPaseListaGrupo?grupo=9IDGS-G2');
+            if (!resp.ok) return;
+
+            const alumnos = await resp.json();
+            const tbody = document.getElementById('tbodyMonitor');
+            if (!tbody) return;
+
+            let cntPres = 0;
+            let cntTol = 0;
+            let cntPend = 0;
+
+            let html = '';
+            alumnos.forEach(a => {
+                let badgeClass = 'bg-secondary';
+                let badgeText = 'PENDIENTE';
+                let icon = 'bi-hourglass-split';
+
+                if (a.estado === 'PRESENTE') {
+                    badgeClass = 'bg-success text-white';
+                    badgeText = 'PRESENTE';
+                    icon = 'bi-check-circle-fill';
+                    cntPres++;
+                } else if (a.estado === 'TOLERANCIA_ACTIVA') {
+                    badgeClass = 'bg-info text-dark';
+                    badgeText = 'TOLERANCIA ACTIVA (+30m)';
+                    icon = 'bi-clock-history';
+                    cntTol++;
+                } else if (a.estado === 'RETARDO') {
+                    badgeClass = 'bg-warning text-dark';
+                    badgeText = 'RETARDO';
+                    icon = 'bi-exclamation-triangle-fill';
+                    cntPres++;
+                } else {
+                    cntPend++;
+                }
+
+                html += `
+                    <tr>
+                        <td class="ps-3 fw-bold text-muted">${a.matricula}</td>
+                        <td class="fw-bold text-dark">${a.nombreCompleto}</td>
+                        <td>
+                            <span class="badge ${badgeClass} fs-6 px-3 py-2">
+                                <i class="bi ${icon} me-1"></i> ${badgeText}
+                            </span>
+                        </td>
+                        <td class="fw-semibold text-dark">${a.horaMarcado ? a.horaMarcado : '<span class="text-muted small">Sin marcar</span>'}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-reception-4 text-success me-1"></i> ${a.metodo}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-success me-1 fw-bold" onclick="marcarManual('${a.matricula}', 'PRESENTE')">
+                                <i class="bi bi-check-lg"></i> Presente
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning fw-bold" onclick="marcarManual('${a.matricula}', 'RETARDO')">
+                                <i class="bi bi-clock"></i> Retardo
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('cntPresentes').innerText = cntPres;
+            document.getElementById('cntTolerancia').innerText = cntTol;
+            document.getElementById('cntPendientes').innerText = cntPend;
+
+        } catch (e) {
+            console.error("Error al cargar asistencia en vivo:", e);
+        }
+    }
+
+    async function marcarManual(matricula, nuevoEstado) {
+        try {
+            await fetch('/api/Asistencia/MarcarAsistenciaManual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matricula: matricula, nuevoEstado: nuevoEstado })
+            });
+            cargarAsistenciaEnVivo();
+        } catch (e) {
+            console.error("Error al marcar manual:", e);
+        }
+    }
+
+    // Iniciar polling al cargar la pantalla
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarAsistenciaEnVivo();
+        setInterval(cargarAsistenciaEnVivo, 3000);
+    });
 </script>
 
 <style>
     .blink-soft { animation: blinker 2s linear infinite; }
     @@keyframes blinker { 50% { opacity: 0.5; } }
+    .pulse-btn { animation: pulse-uttt 2.5s infinite; }
+    @@keyframes pulse-uttt {
+        0% { box-shadow: 0 0 0 0 rgba(0, 104, 55, 0.6); }
+        70% { box-shadow: 0 0 0 15px rgba(0, 104, 55, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 104, 55, 0); }
+    }
 </style>

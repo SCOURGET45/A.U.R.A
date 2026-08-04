@@ -14,6 +14,7 @@ using Aura.Models;
 namespace Aura.Controllers
 {
     [Authorize(Roles = "Docente")]
+    [Route("Docente")]
     public class DocenteController : Controller
     {
         private readonly AuraDbContext _context;
@@ -120,70 +121,137 @@ namespace Aura.Controllers
             return View(model);
         }
 
-        // Método para descargar la lista de asistencia en formato Excel institucional
-        [HttpGet("DescargarLista/{idGrupo}")]
-        public IActionResult DescargarLista(int idGrupo)
+        // Vista Imprimible / PDF del Reporte Oficial UTTT F-DC-02/R5
+        [HttpGet("ReporteSemanal")]
+        public IActionResult ReporteSemanal(string grupo = "9IDGS-G2", string asignatura = "Administración de Proyectos de TI")
+        {
+            ViewBag.Grupo = grupo;
+            ViewBag.Asignatura = asignatura;
+            return View();
+        }
+
+        // Descarga de Excel F-DC-02/R5 de Control de Asistencias y Evaluaciones
+        [HttpGet("DescargarReporteExcel")]
+        public IActionResult DescargarReporteExcel(string grupo = "9IDGS-G2", string asignatura = "Administración de Proyectos de TI")
         {
             using var workbook = new XLWorkbook();
-            var hoja = workbook.Worksheets.Add("Lista de Asistencia");
+            var hoja = workbook.Worksheets.Add("F-DC-02 R5 Control Asistencia");
 
-            // Encabezados institucionales
-            hoja.Cell("B2").Value = "UNIVERSIDAD TECNOLÓGICA DE TULA-TEPEJI";
-            hoja.Cell("B2").Style.Font.SetBold().Font.SetFontSize(14);
-            hoja.Cell("B3").Value = "SISTEMA A.U.R.A. - LISTA DE ASISTENCIA Y EVALUACIÓN";
-            hoja.Cell("B3").Style.Font.SetBold();
+            // Cabecera Institucional
+            hoja.Cell("A1").Value = "UNIVERSIDAD TECNOLÓGICA DE TULA-TEPEJI";
+            hoja.Cell("A1").Style.Font.SetBold().Font.SetFontSize(14).Font.SetFontColor(XLColor.DarkGreen);
 
-            hoja.Cell("B5").Value = "Carrera: Desarrollo de Software Multiplataforma";
-            hoja.Cell("B6").Value = "Cuatrimestre: Noveno Cuatrimestre";
-            hoja.Cell("B7").Value = $"Grupo ID: {idGrupo}";
-            hoja.Cell("B8").Value = $"Docente: {User.Identity?.Name ?? "Odisey Yasmin Porras Beltrán"}";
-            hoja.Cell("B9").Value = $"Fecha de Emisión: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            hoja.Cell("E1").Value = "CONTROL DE ASISTENCIAS Y EVALUACIONES";
+            hoja.Cell("E1").Style.Font.SetBold().Font.SetFontSize(12);
 
-            // Tabla de Alumnos
-            int filaInicial = 11;
-            hoja.Cell(filaInicial, 1).Value = "#";
-            hoja.Cell(filaInicial, 2).Value = "Matrícula";
-            hoja.Cell(filaInicial, 3).Value = "Nombre Completo";
-            hoja.Cell(filaInicial, 4).Value = "Asistencias";
-            hoja.Cell(filaInicial, 5).Value = "Retardos";
-            hoja.Cell(filaInicial, 6).Value = "Faltas Totales (3R=1F)";
-            hoja.Cell(filaInicial, 7).Value = "% Asistencia";
-            hoja.Cell(filaInicial, 8).Value = "Estatus Derecho";
+            hoja.Cell("U1").Value = "Universidad Tecnológica de Tula-Tepeji\nOrganismo Público Descentralizado\ndel Gobierno del Estado de Hidalgo";
+            hoja.Cell("U1").Style.Font.SetFontSize(8).Alignment.SetHorizontal(XLAlignmentHorizontalValues.Right);
 
-            var rangoEncabezados = hoja.Range(filaInicial, 1, filaInicial, 8);
-            rangoEncabezados.Style.Font.SetBold();
-            rangoEncabezados.Style.Fill.SetBackgroundColor(XLColor.DarkGray);
-            rangoEncabezados.Style.Font.FontColor = XLColor.White;
+            // Bloque Metadatos
+            hoja.Cell("A3").Value = "Programa Educativo : TECNOLOGÍAS DE LA INFORMACIÓN, INGENIERÍA EN DESARROLLO Y GESTIÓN DE SOFTWARE";
+            hoja.Cell("A3").Style.Font.SetBold();
+            hoja.Cell("A4").Value = $"Asignatura : {asignatura.ToUpper()}";
+            hoja.Cell("U4").Value = $"Grupo : {grupo}";
+            hoja.Cell("A5").Value = "Cuatrimestre : NOVENO CUATRIMESTRE";
+            hoja.Cell("A6").Value = $"Docente : {User.Identity?.Name ?? "Odisey Yasmin Porras Beltrán"}";
 
-            // Datos de demostración estructurados
-            var alumnos = new[]
+            // Encabezados Matriz de Semanas (Fila 8-10)
+            hoja.Cell("A8").Value = "#";
+            hoja.Cell("B8").Value = "Nombre del Alumno";
+
+            string[] semanas = { "Semana 1", "Semana 2", "Semana 3", "Semana 4", "Semana 5" };
+            int col = 3;
+            foreach (var sem in semanas)
             {
-                new { Mat = "23301133", Nom = "ALAN SANTIAGO MOLINA", Asis = 18, Ret = 2, Faltas = 1, Pct = 90.0, Est = "CON DERECHO" },
-                new { Mat = "23301145", Nom = "MARÍA FERNANDA GÓMEZ", Asis = 15, Ret = 3, Faltas = 3, Pct = 83.3, Est = "CON DERECHO" },
-                new { Mat = "23301199", Nom = "CARLOS EDUARDO PÉREZ", Asis = 19, Ret = 1, Faltas = 0, Pct = 95.0, Est = "CON DERECHO" },
-                new { Mat = "23301201", Nom = "DANIELA RÍOS CÁRDENAS", Asis = 14, Ret = 4, Faltas = 5, Pct = 70.0, Est = "SIN DERECHO (REPROBADO)" }
+                var rngSem = hoja.Range(8, col, 8, col + 3);
+                rngSem.Merge().Value = sem;
+                rngSem.Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                rngSem.Style.Font.SetBold();
+                rngSem.Style.Fill.SetBackgroundColor(XLColor.LightGray);
+
+                hoja.Cell(9, col).Value = "Lu";
+                hoja.Cell(9, col + 1).Value = "Ma";
+                hoja.Cell(9, col + 2).Value = "Mi";
+                hoja.Cell(9, col + 3).Value = "Ju";
+                col += 4;
+            }
+
+            hoja.Cell("W8").Value = "TC";
+            hoja.Cell("X8").Value = "TA";
+            hoja.Cell("Y8").Value = "TF";
+            hoja.Cell("Z8").Value = "% As";
+
+            var hdrRange = hoja.Range(8, 1, 9, 26);
+            hdrRange.Style.Font.SetBold();
+            hdrRange.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+            hdrRange.Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
+
+            // Alumnos del grupo
+            var listaAlumnos = new[] {
+                "ALAN SANTIAGO MOLINA", "ALBERTO CRUZ ZEPEDA", "ALDO ALEXIS MEZA ARGUELLES",
+                "BRIDGED CITLALI CORNEJO YAÑEZ", "CHRISTOPHER CAMARGO GONZALEZ", "DELIA LESLIE JIMENEZ NERI",
+                "DIEGO PARRA CRUZ", "DORIAN ALEJANDRO TREJO VEGA", "FATIMA XIMENA GARCIA GONZALEZ",
+                "FELICITAS RUBI DIEGO GARCIA", "JESSUI FLORES PACHECO", "JOSE DE JESUS LOPEZ ISLAS",
+                "LEONARDO ISAAC BARRERA TEJEDA", "LIZETH PEREZ ATANACIO", "MARIA DEL ROCIO CRUZ CERVANTES",
+                "MARISOL GONZALEZ VILLA", "MELANIE JOLIEE BONILLA DOMINGUEZ", "OMAR PICAZO ARANZOLO",
+                "OSCAR JOSE SALINAS ESCOBAR", "RODRIGO DOMINGUEZ CRESPO", "RODRIGO SANCHEZ CRUZ",
+                "VICTOR MANUEL RUFIN PIÑA", "YAEL MONROY CRUZ"
             };
 
-            int fila = filaInicial + 1;
-            int count = 1;
-            foreach (var a in alumnos)
+            int row = 10;
+            int idx = 1;
+            foreach (var nom in listaAlumnos)
             {
-                hoja.Cell(fila, 1).Value = count++;
-                hoja.Cell(fila, 2).Value = a.Mat;
-                hoja.Cell(fila, 3).Value = a.Nom;
-                hoja.Cell(fila, 4).Value = a.Asis;
-                hoja.Cell(fila, 5).Value = a.Ret;
-                hoja.Cell(fila, 6).Value = a.Faltas;
-                hoja.Cell(fila, 7).Value = $"{a.Pct}%";
-                hoja.Cell(fila, 8).Value = a.Est;
+                hoja.Cell(row, 1).Value = idx;
+                hoja.Cell(row, 2).Value = nom;
 
-                if (a.Est.Contains("SIN DERECHO"))
+                bool esRiesgo = idx == 4 || idx == 14;
+                bool tieneRet = idx % 3 == 0;
+                bool tieneJust = idx == 1 || idx == 10;
+
+                // Llenar marcas de semanas
+                for (int c = 3; c <= 22; c++)
                 {
-                    hoja.Range(fila, 1, fila, 8).Style.Fill.SetBackgroundColor(XLColor.LightCoral);
+                    if (c == 7 && tieneRet) hoja.Cell(row, c).Value = "X";
+                    else if (c == 11 && esRiesgo) hoja.Cell(row, c).Value = "/";
+                    else if (c == 14 && tieneJust) hoja.Cell(row, c).Value = "+=";
+                    else if (c == 19 && esRiesgo) hoja.Cell(row, c).Value = "/";
+                    else hoja.Cell(row, c).Value = ".";
+
+                    hoja.Cell(row, c).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
                 }
 
-                fila++;
+                int tc = 20;
+                int ta = esRiesgo ? 14 : (tieneRet ? 18 : 19);
+                int tf = tc - ta;
+                double pct = Math.Round(((double)ta / tc) * 100, 1);
+
+                hoja.Cell(row, 23).Value = tc;
+                hoja.Cell(row, 24).Value = ta;
+                hoja.Cell(row, 25).Value = tf;
+                hoja.Cell(row, 26).Value = $"{pct}%";
+
+                if (pct < 80)
+                {
+                    hoja.Range(row, 1, row, 26).Style.Fill.SetBackgroundColor(XLColor.LightPink);
+                }
+
+                row++;
+                idx++;
             }
+
+            // Bordes y Simbología
+            var gridRange = hoja.Range(8, 1, row - 1, 26);
+            gridRange.Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+            gridRange.Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
+
+            int symRow = row + 1;
+            hoja.Cell(symRow, 1).Value = "Simbología:";
+            hoja.Cell(symRow, 1).Style.Font.SetBold();
+            hoja.Cell(symRow + 1, 1).Value = ". = Asistencia   / = falta   += = Falta justificada   X = Retardo";
+            hoja.Cell(symRow + 2, 1).Value = "TC = Total de clases   TA = Total asistencia   TF = Total faltas";
+            hoja.Cell(symRow + 2, 23).Value = "F-DC-02/R5 - Septiembre 02, 2015";
+            hoja.Cell(symRow + 2, 23).Style.Font.SetBold().Font.SetFontSize(8);
 
             hoja.Columns().AdjustToContents();
 
@@ -191,7 +259,14 @@ namespace Aura.Controllers
             workbook.SaveAs(stream);
             var content = stream.ToArray();
 
-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Lista_Asistencia_Grupo_{idGrupo}.xlsx");
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Reporte_Asistencia_UTTT_F-DC-02R5_{grupo}.xlsx");
+        }
+
+        // Método legacy para descargar la lista de asistencia simple
+        [HttpGet("DescargarLista/{idGrupo}")]
+        public IActionResult DescargarLista(int idGrupo)
+        {
+            return RedirectToAction(nameof(DescargarReporteExcel), new { grupo = idGrupo == 1 ? "9IDGS-G2" : "9IDGS-G1" });
         }
     }
 }

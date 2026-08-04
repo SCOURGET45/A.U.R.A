@@ -10,11 +10,16 @@
             <h2 class="fw-bold text-dark mb-1">
                 <i class="bi bi-collection-fill text-primary me-2"></i>Gestión Administrativa - Mis Grupos
             </h2>
-            <p class="text-muted mb-0">Navegación jerárquica de grupos asignados, barras de progreso y descarga de listas en formato institucional.</p>
+            <p class="text-muted mb-0">Navegación jerárquica de grupos asignados, barras de progreso y descarga de listas en formato oficial F-DC-02/R5 UTTT.</p>
         </div>
-        <a asp-action="MiDia" class="btn btn-outline-primary fw-bold">
-            <i class="bi bi-broadcast me-1"></i> Modo "Mi Día" (Pase de Lista)
-        </a>
+        <div class="d-flex gap-2">
+            <a asp-action="ReporteSemanal" class="btn btn-success fw-bold">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Sábana F-DC-02/R5
+            </a>
+            <a asp-action="MiDia" class="btn btn-outline-primary fw-bold">
+                <i class="bi bi-broadcast me-1"></i> Modo "Mi Día" (Pase de Lista)
+            </a>
+        </div>
     </div>
 
     <!-- Grupos Grid -->
@@ -87,10 +92,13 @@
                         </div>
                     </div>
 
-                    <!-- Action: Download Excel -->
-                    <div class="card-footer bg-transparent border-top-0 pt-0 pb-3">
-                        <a asp-action="DescargarLista" asp-route-idGrupo="@g.IdGrupo" class="btn btn-outline-success w-100 fw-bold shadow-sm">
-                            <i class="bi bi-file-earmark-excel me-1"></i> Descargar Lista Institucional (Excel)
+                    <!-- Action Buttons: Download Excel F-DC-02/R5 and PDF / Print View -->
+                    <div class="card-footer bg-transparent border-top-0 pt-0 pb-3 d-flex flex-column gap-2">
+                        <a asp-action="ReporteSemanal" asp-route-grupo="@g.NombreGrupo" asp-route-asignatura="@g.Materia" class="btn btn-outline-primary w-100 fw-bold shadow-sm">
+                            <i class="bi bi-printer me-1"></i> Ver Sábana UTTT F-DC-02/R5 (PDF)
+                        </a>
+                        <a asp-action="DescargarReporteExcel" asp-route-grupo="@g.NombreGrupo" asp-route-asignatura="@g.Materia" class="btn btn-success w-100 fw-bold shadow-sm">
+                            <i class="bi bi-file-earmark-excel-fill me-1"></i> Descargar Excel F-DC-02/R5
                         </a>
                     </div>
                 </div>

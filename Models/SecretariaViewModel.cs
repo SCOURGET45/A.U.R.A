@@ -13,6 +13,8 @@ namespace Aura.Models
 
         public List<AlumnoVulnerableViewModel> AlumnosVulnerables { get; set; } = new List<AlumnoVulnerableViewModel>();
         public List<AlumnoEditViewModel> AlumnosRegistrados { get; set; } = new List<AlumnoEditViewModel>();
+        public List<AsignacionClaseDocenteViewModel> AsignacionesClases { get; set; } = new List<AsignacionClaseDocenteViewModel>();
+        public List<AsignacionGrupoTutorViewModel> AsignacionesTutores { get; set; } = new List<AsignacionGrupoTutorViewModel>();
     }
 
     public class AlumnoVulnerableViewModel
@@ -42,6 +44,37 @@ namespace Aura.Models
 
         [Required(ErrorMessage = "El grupo es obligatorio.")]
         public string NombreGrupo { get; set; } = string.Empty;
+    }
+
+    public class AsignacionClaseDocenteViewModel
+    {
+        public int IdAsignacion { get; set; }
+
+        [Required(ErrorMessage = "El nombre del docente es obligatorio.")]
+        public string NombreDocente { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La asignatura es obligatoria.")]
+        public string NombreMateria { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El grupo es obligatorio.")]
+        public string NombreGrupo { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El horario es obligatorio.")]
+        public string Horario { get; set; } = string.Empty;
+    }
+
+    public class AsignacionGrupoTutorViewModel
+    {
+        public int IdAsignacion { get; set; }
+
+        [Required(ErrorMessage = "El nombre del tutor es obligatorio.")]
+        public string NombreTutor { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El grupo es obligatorio.")]
+        public string NombreGrupo { get; set; } = string.Empty;
+
+        public string Carrera { get; set; } = "Desarrollo de Software Multiplataforma";
+        public int TotalAlumnos { get; set; } = 28;
     }
 
     public class ConfigurarUnidadViewModel

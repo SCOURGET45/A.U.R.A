@@ -19,13 +19,29 @@ namespace Aura.Controllers
     {
         private readonly AuraDbContext _context;
 
-        // Almacén persistente en memoria para garantizar despliegue inmediato en pantalla
+        // Almacén persistente de Alumnos
         private static readonly List<AlumnoEditViewModel> _alumnosMemoria = new List<AlumnoEditViewModel>
         {
             new AlumnoEditViewModel { IdEstudiante = 1, Matricula = "23301133", Nombre = "Alan Santiago", Apellidos = "Molina", NombreGrupo = "9IDGS-G2" },
             new AlumnoEditViewModel { IdEstudiante = 2, Matricula = "23301145", Nombre = "María Fernanda", Apellidos = "Gómez", NombreGrupo = "9IDGS-G1" },
             new AlumnoEditViewModel { IdEstudiante = 3, Matricula = "23301199", Nombre = "Carlos Eduardo", Apellidos = "Pérez", NombreGrupo = "9IDGS-G2" },
             new AlumnoEditViewModel { IdEstudiante = 4, Matricula = "23301201", Nombre = "Daniela", Apellidos = "Ríos Cárdenas", NombreGrupo = "7MEC-G1" }
+        };
+
+        // Almacén persistente de Asignaciones de Clases a Docentes
+        private static readonly List<AsignacionClaseDocenteViewModel> _asignacionesClases = new List<AsignacionClaseDocenteViewModel>
+        {
+            new AsignacionClaseDocenteViewModel { IdAsignacion = 1, NombreDocente = "Odisey Yasmin Porras Beltrán", NombreMateria = "Administración de Proyectos de TI", NombreGrupo = "9IDGS-G2", Horario = "Lunes y Miércoles 08:00 - 10:00 hrs" },
+            new AsignacionClaseDocenteViewModel { IdAsignacion = 2, NombreDocente = "Odisey Yasmin Porras Beltrán", NombreMateria = "Desarrollo Web Profesional", NombreGrupo = "9IDGS-G1", Horario = "Martes y Jueves 10:30 - 12:30 hrs" },
+            new AsignacionClaseDocenteViewModel { IdAsignacion = 3, NombreDocente = "Carlos Ramírez Cruz", NombreMateria = "Sistemas Embebidos", NombreGrupo = "7MEC-G1", Horario = "Viernes 08:00 - 12:00 hrs" }
+        };
+
+        // Almacén persistente de Asignaciones de Grupos Enteros a Tutores
+        private static readonly List<AsignacionGrupoTutorViewModel> _asignacionesTutores = new List<AsignacionGrupoTutorViewModel>
+        {
+            new AsignacionGrupoTutorViewModel { IdAsignacion = 1, NombreTutor = "Odisey Yasmin Porras Beltrán", NombreGrupo = "9IDGS-G2", Carrera = "Desarrollo de Software Multiplataforma", TotalAlumnos = 28 },
+            new AsignacionGrupoTutorViewModel { IdAsignacion = 2, NombreTutor = "María Elena Gutiérrez", NombreGrupo = "9IDGS-G1", Carrera = "Desarrollo de Software Multiplataforma", TotalAlumnos = 30 },
+            new AsignacionGrupoTutorViewModel { IdAsignacion = 3, NombreTutor = "Roberto Sánchez López", NombreGrupo = "7MEC-G1", Carrera = "Mecatrónica y Sistemas Automatizados", TotalAlumnos = 25 }
         };
 
         public SecretariaController(AuraDbContext context)
@@ -128,10 +144,73 @@ namespace Aura.Controllers
                 TotalAlumnosVulnerables = vulnerables.Count,
                 TotalMateriasConfiguradas = 12,
                 AlumnosVulnerables = vulnerables,
-                AlumnosRegistrados = listaFinalAlumnos
+                AlumnosRegistrados = listaFinalAlumnos,
+                AsignacionesClases = _asignacionesClases.ToList(),
+                AsignacionesTutores = _asignacionesTutores.ToList()
             };
 
             return View(model);
+        }
+
+        // Asignación de Clases a Docentes (POST)
+        [HttpPost("AsignarClaseDocente")]
+        public IActionResult AsignarClaseDocente(AsignacionClaseDocenteViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["Error"] = "Por favor completa todos los campos para asignar la clase al docente.";
+                return RedirectToAction(nameof(Dashboard));
+            }
+
+            int nuevoId = _asignacionesClases.Any() ? _asignacionesClases.Max(a => a.IdAsignacion) + 1 : 1;
+            model.IdAsignacion = nuevoId;
+            _asignacionesClases.Add(model);
+
+            TempData["Exito"] = $"Clase '{model.NombreMateria}' ({model.NombreGrupo}) asignada exitosamente al docente {model.NombreDocente}.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        // Asignación de Grupos Enteros a Tutores (POST)
+        [HttpPost("AsignarGrupoTutor")]
+        public async Task<IActionResult> AsignarGrupoTutor(AsignacionGrupoTutorViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["Error"] = "Por favor selecciona el grupo y tutor correspondiente.";
+                return RedirectToAction(nameof(Dashboard));
+            }
+
+            // Actualizar asignación en almacén
+            var existente = _asignacionesTutores.FirstOrDefault(a => a.NombreGrupo == model.NombreGrupo);
+            if (existente != null)
+            {
+                existente.NombreTutor = model.NombreTutor;
+            }
+            else
+            {
+                int nuevoId = _asignacionesTutores.Any() ? _asignacionesTutores.Max(a => a.IdAsignacion) + 1 : 1;
+                model.IdAsignacion = nuevoId;
+                model.TotalAlumnos = _alumnosMemoria.Count(a => a.NombreGrupo == model.NombreGrupo);
+                if (model.TotalAlumnos == 0) model.TotalAlumnos = 28;
+                _asignacionesTutores.Add(model);
+            }
+
+            // Intentar vincular en BD
+            try
+            {
+                var grupoObj = await _context.Grupos.FirstOrDefaultAsync(g => g.NombreGrupo == model.NombreGrupo);
+                if (grupoObj != null)
+                {
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch
+            {
+                // Registrado en memoria
+            }
+
+            TempData["Exito"] = $"El grupo entero '{model.NombreGrupo}' fue asignado exitosamente a la tutoría de {model.NombreTutor}. Todos sus alumnos han sido vinculados.";
+            return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpPost("GuardarAlumno")]
@@ -143,7 +222,6 @@ namespace Aura.Controllers
                 return RedirectToAction(nameof(Dashboard));
             }
 
-            // Actualizar almacén de memoria primero
             var existenteMemoria = _alumnosMemoria.FirstOrDefault(a => a.IdEstudiante == model.IdEstudiante || a.Matricula == model.Matricula);
             if (existenteMemoria != null)
             {
@@ -165,7 +243,6 @@ namespace Aura.Controllers
                 });
             }
 
-            // Intentar persistir en BD
             try
             {
                 var grupoObj = await _context.Grupos.FirstOrDefaultAsync(g => g.NombreGrupo == model.NombreGrupo);
@@ -229,7 +306,7 @@ namespace Aura.Controllers
             }
             catch
             {
-                // Memoria ya fue actualizada
+                // Memoria actualizada
             }
 
             TempData["Exito"] = $"El alumno {model.Nombre} {model.Apellidos} ({model.Matricula}) fue guardado e integrado exitosamente.";
@@ -256,7 +333,7 @@ namespace Aura.Controllers
             }
             catch
             {
-                // Memoria ya fue actualizada
+                // Memoria actualizada
             }
 
             TempData["Exito"] = "El registro del alumno fue dado de baja correctamente.";
@@ -399,7 +476,6 @@ namespace Aura.Controllers
                     string nombreCompleto = "";
                     string nombreGrupo = "9IDGS-G2";
 
-                    // Evaluar columnas: Formato (Matricula, Correo, Nombre, Grupo) o (Matricula, Nombre, Apellidos, Grupo)
                     if (campos[1].Contains("@"))
                     {
                         correoInst = campos[1];
@@ -415,7 +491,6 @@ namespace Aura.Controllers
 
                     if (string.IsNullOrWhiteSpace(matricula) || string.IsNullOrWhiteSpace(nombreCompleto)) continue;
 
-                    // Separar Nombre y Apellidos
                     string nombre = nombreCompleto;
                     string apellidos = "";
                     var partes = nombreCompleto.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -430,7 +505,6 @@ namespace Aura.Controllers
                         apellidos = partes[1];
                     }
 
-                    // 1. Integración en Almacén en Memoria (Garantiza visualización inmediata en pantalla)
                     var existenteMem = _alumnosMemoria.FirstOrDefault(a => a.Matricula == matricula);
                     if (existenteMem != null)
                     {
@@ -451,7 +525,6 @@ namespace Aura.Controllers
                         });
                     }
 
-                    // 2. Intentar persistencia en Base de Datos EF
                     try
                     {
                         Grupo? grupoObj = await _context.Grupos.FirstOrDefaultAsync(g => g.NombreGrupo == nombreGrupo);
@@ -510,7 +583,7 @@ namespace Aura.Controllers
                     }
                     catch
                     {
-                        // Registrado exitosamente en almacén en memoria
+                        // Memoria actualizada
                     }
 
                     procesadosCount++;

@@ -10,18 +10,18 @@
             <h2 class="fw-bold text-dark mb-1">
                 <i class="bi bi-building-gear text-primary me-2"></i>Administración Central & Secretaría
             </h2>
-            <p class="text-muted mb-0">Gestión masiva y directa de la plantilla cuatrimestral, directorio y tolerancias.</p>
+            <p class="text-muted mb-0">Gestión de plantilla, carga horaria de docentes, tutorías de grupos enteros y tolerancias.</p>
         </div>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-success fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalEditarAlumno" onclick="prepararNuevoAlumno()">
-                <i class="bi bi-person-plus-fill me-1"></i> Agregar Alumno Manualmente
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-primary fw-bold" data-bs-toggle="modal" data-bs-target="#modalAsignarClase">
+                <i class="bi bi-journal-plus me-1"></i> Asignar Clase a Docente
             </button>
-            <a asp-action="ConfigurarUnidades" class="btn btn-outline-primary fw-bold">
-                <i class="bi bi-gear-wide-connected me-1"></i> Configuración de Unidades
-            </a>
-            <a asp-action="AlumnosVulnerables" class="btn btn-primary fw-bold">
-                <i class="bi bi-shield-lock me-1"></i> Alumnos Vulnerables
-            </a>
+            <button type="button" class="btn btn-outline-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalAsignarTutor">
+                <i class="bi bi-people-fill me-1"></i> Asignar Grupo a Tutor
+            </button>
+            <button type="button" class="btn btn-success fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalEditarAlumno" onclick="prepararNuevoAlumno()">
+                <i class="bi bi-person-plus-fill me-1"></i> Agregar Alumno
+            </button>
         </div>
     </div>
 
@@ -91,7 +91,88 @@
         </div>
     </div>
 
-    <!-- Sección 1: Carga Masiva & Directorio -->
+    <!-- SECCIÓN NUEVA: ASIGNACIÓN DE CLASES A DOCENTES Y GRUPOS ENTEROS A TUTORES -->
+    <div class="row g-4 mb-4">
+        <!-- Asignaciones de Clases a Docentes -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-journal-bookmark me-2"></i>Clases Asignadas a Docentes</h5>
+                    <button type="button" class="btn btn-sm btn-outline-light fw-bold" data-bs-toggle="modal" data-bs-target="#modalAsignarClase">
+                        <i class="bi bi-plus-lg me-1"></i> Asignar Clase
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light small">
+                                <tr>
+                                    <th class="ps-3">Docente</th>
+                                    <th>Asignatura</th>
+                                    <th>Grupo</th>
+                                    <th>Horario</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in Model.AsignacionesClases)
+                                {
+                                    <tr>
+                                        <td class="ps-3 fw-bold text-dark small">@c.NombreDocente</td>
+                                        <td class="small"><span class="badge bg-light text-primary border">@c.NombreMateria</span></td>
+                                        <td><span class="badge bg-secondary">@c.NombreGrupo</span></td>
+                                        <td class="small text-muted"><i class="bi bi-clock me-1"></i>@c.Horario</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Asignaciones de Grupos Enteros a Tutores -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-person-badge me-2"></i>Tutorías de Grupos Enteros</h5>
+                    <button type="button" class="btn btn-sm btn-outline-light fw-bold" data-bs-toggle="modal" data-bs-target="#modalAsignarTutor">
+                        <i class="bi bi-plus-lg me-1"></i> Asignar Tutor
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light small">
+                                <tr>
+                                    <th class="ps-3">Grupo Entero</th>
+                                    <th>Tutor Asignado</th>
+                                    <th>Carrera / Programa</th>
+                                    <th class="text-center">Alumnos Vinculados</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var t in Model.AsignacionesTutores)
+                                {
+                                    <tr>
+                                        <td class="ps-3 fw-bold text-primary">@t.NombreGrupo</td>
+                                        <td class="fw-bold text-dark small">@t.NombreTutor</td>
+                                        <td class="small text-muted">@t.Carrera</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success px-3 py-1">
+                                                <i class="bi bi-people me-1"></i> @t.TotalAlumnos alumnos
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección Carga Masiva & Directorio -->
     <div class="row g-4 mb-4">
         <!-- 5.1 Carga Masiva CSV -->
         <div class="col-lg-6">
@@ -179,7 +260,7 @@
         </div>
     </div>
 
-    <!-- Sección 2: Edición Directa y Gestor de Alumnos en Pantalla -->
+    <!-- Sección Edición Directa y Gestor de Alumnos -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-semibold">
@@ -230,45 +311,76 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- 5.2 Panel de Alumnos Vulnerables (Solo Lectura) -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-semibold"><i class="bi bi-shield-check me-2"></i>Panel Consolidado de Alumnos Vulnerables (Solo Lectura)</h5>
-            <span class="badge bg-info text-dark">Banderas de Tolerancia Activas</span>
+<!-- Modal Asignar Clase a Docente -->
+<div class="modal fade" id="modalAsignarClase" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Secretaria" asp-action="AsignarClaseDocente" method="post">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-journal-plus me-2"></i>Asignar Clase a Docente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Nombre del Docente <span class="text-danger">*</span></label>
+                        <input type="text" name="NombreDocente" class="form-control" placeholder="Ej. Odisey Yasmin Porras Beltrán" value="Odisey Yasmin Porras Beltrán" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Asignatura / Materia <span class="text-danger">*</span></label>
+                        <input type="text" name="NombreMateria" class="form-control" placeholder="Ej. Administración de Proyectos de TI" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Grupo Asignado <span class="text-danger">*</span></label>
+                        <input type="text" name="NombreGrupo" class="form-control" placeholder="Ej. 9IDGS-G2" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Horario de Impartición <span class="text-danger">*</span></label>
+                        <input type="text" name="Horario" class="form-control" placeholder="Ej. Lunes y Miércoles 08:00 - 10:00 hrs" required />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Guardar Carga Horaria</button>
+                </div>
+            </form>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="ps-3">Matrícula</th>
-                            <th>Alumno</th>
-                            <th>Grupo</th>
-                            <th>Tutor Responsable</th>
-                            <th>Motivo Vulnerabilidad</th>
-                            <th class="text-center">Tolerancia Otorgada</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var alumno in Model.AlumnosVulnerables)
-                        {
-                            <tr>
-                                <td class="ps-3 fw-bold text-muted">@alumno.Matricula</td>
-                                <td class="fw-bold text-dark">@alumno.NombreCompleto</td>
-                                <td><span class="badge bg-light text-dark border">@alumno.NombreGrupo</span></td>
-                                <td>@alumno.NombreTutor</td>
-                                <td><span class="badge bg-info text-dark">@alumno.Motivo</span></td>
-                                <td class="text-center">
-                                    <span class="badge bg-success px-3 py-2 fs-6">
-                                        <i class="bi bi-clock-history me-1"></i> +@alumno.MinutosTolerancia min.
-                                    </span>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+    </div>
+</div>
+
+<!-- Modal Asignar Grupo Entero a Tutor -->
+<div class="modal fade" id="modalAsignarTutor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Secretaria" asp-action="AsignarGrupoTutor" method="post">
+                <div class="modal-header bg-success text-white py-3">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-people-fill me-2"></i>Asignar Grupo Entero a Tutor</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Grupo Entero a Asignar <span class="text-danger">*</span></label>
+                        <select name="NombreGrupo" class="form-select form-select-lg fw-bold" required>
+                            <option value="9IDGS-G2">Grupo 9IDGS-G2 (28 Alumnos)</option>
+                            <option value="9IDGS-G1">Grupo 9IDGS-G1 (30 Alumnos)</option>
+                            <option value="7MEC-G1">Grupo 7MEC-G1 (25 Alumnos)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Tutor Responsable <span class="text-danger">*</span></label>
+                        <input type="text" name="NombreTutor" class="form-control" placeholder="Ej. Odisey Yasmin Porras Beltrán" value="Odisey Yasmin Porras Beltrán" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Carrera / Programa Educativo</label>
+                        <input type="text" name="Carrera" class="form-control" value="Desarrollo de Software Multiplataforma" />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4">Asignar Grupo a Tutoría</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
