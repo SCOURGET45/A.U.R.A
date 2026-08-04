@@ -63,6 +63,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2VjcmV0YXJpYVxEYXNoYm9hcmQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Proyectos/A.U.R.A/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Proyectos/A.U.R.A/Views/Tutor/EmitirJustificante.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHV0b3JcRW1pdGlySnVzdGlmaWNhbnRlLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -73,4 +77,12 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Proyectos/A.U.R.A/Views/Tutor/SolicitarVulnerabilidad.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHV0b3JcU29saWNpdGFyVnVsbmVyYWJpbGlkYWQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Proyectos/A.U.R.A/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Proyectos/A.U.R.A/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 

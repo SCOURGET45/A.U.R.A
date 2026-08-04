@@ -12,6 +12,7 @@ namespace Aura.Models
         public int TotalMateriasConfiguradas { get; set; }
 
         public List<AlumnoVulnerableViewModel> AlumnosVulnerables { get; set; } = new List<AlumnoVulnerableViewModel>();
+        public List<AlumnoEditViewModel> AlumnosRegistrados { get; set; } = new List<AlumnoEditViewModel>();
     }
 
     public class AlumnoVulnerableViewModel
@@ -24,6 +25,23 @@ namespace Aura.Models
         public string Motivo { get; set; } = string.Empty;
         public int MinutosTolerancia { get; set; }
         public DateTime FechaAprobacion { get; set; }
+    }
+
+    public class AlumnoEditViewModel
+    {
+        public int IdEstudiante { get; set; }
+
+        [Required(ErrorMessage = "La matrícula es obligatoria.")]
+        public string Matricula { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        public string Nombre { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Los apellidos son obligatorios.")]
+        public string Apellidos { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El grupo es obligatorio.")]
+        public string NombreGrupo { get; set; } = string.Empty;
     }
 
     public class ConfigurarUnidadViewModel

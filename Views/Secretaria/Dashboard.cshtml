@@ -10,9 +10,12 @@
             <h2 class="fw-bold text-dark mb-1">
                 <i class="bi bi-building-gear text-primary me-2"></i>Administración Central & Secretaría
             </h2>
-            <p class="text-muted mb-0">Carga masiva de la plantilla cuatrimestral, gestión del directorio y panel consolidado de tolerancias.</p>
+            <p class="text-muted mb-0">Gestión masiva y directa de la plantilla cuatrimestral, directorio y tolerancias.</p>
         </div>
         <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalEditarAlumno" onclick="prepararNuevoAlumno()">
+                <i class="bi bi-person-plus-fill me-1"></i> Agregar Alumno Manualmente
+            </button>
             <a asp-action="ConfigurarUnidades" class="btn btn-outline-primary fw-bold">
                 <i class="bi bi-gear-wide-connected me-1"></i> Configuración de Unidades
             </a>
@@ -88,17 +91,21 @@
         </div>
     </div>
 
+    <!-- Sección 1: Carga Masiva & Directorio -->
     <div class="row g-4 mb-4">
         <!-- 5.1 Carga Masiva CSV -->
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-dark text-white py-3">
+                <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-semibold"><i class="bi bi-cloud-upload me-2"></i>Carga Masiva de Alumnos (CSV)</h5>
+                    <a asp-controller="Secretaria" asp-action="DescargarPlantillaCSV" class="btn btn-outline-light btn-sm fw-bold">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i> Plantilla CSV
+                    </a>
                 </div>
                 <div class="card-body">
                     <p class="text-muted small">
-                        Sube la plantilla oficial institucional en formato <strong>.CSV</strong> al inicio del cuatrimestre.
-                        El sistema mapeará automáticamente alumnos, grupos, docentes y tutores.
+                        Sube la plantilla oficial en formato <strong>.CSV</strong> al inicio del cuatrimestre.
+                        El sistema autodetecta delimitadores por coma (<code>,</code>) o punto y coma (<code>;</code>) de Excel.
                     </p>
 
                     <form asp-controller="Secretaria" asp-action="CargarAlumnosCSV" method="post" enctype="multipart/form-data">
@@ -107,7 +114,7 @@
                             <input class="form-control" type="file" id="archivoCsv" name="archivoCsv" accept=".csv" required>
                         </div>
                         <div class="alert alert-light border small text-muted mb-3">
-                            <code>Matrícula, Nombre, Apellidos, IdGrupo, NombreDocente, NombreTutor</code>
+                            Columnas esperadas: <code>Matricula, Correo, Nombre, Grupo</code>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 fw-bold">
                             <i class="bi bi-cloud-arrow-up-fill me-1"></i> Procesar e Inscribir Plantilla Masiva
@@ -117,7 +124,7 @@
             </div>
         </div>
 
-        <!-- 5.1 Directorio Jerárquico Árbol (Áreas -> Cuatrimestres -> Grupos) -->
+        <!-- 5.1 Directorio Jerárquico Árbol -->
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-dark text-white py-3">
@@ -172,6 +179,58 @@
         </div>
     </div>
 
+    <!-- Sección 2: Edición Directa y Gestor de Alumnos en Pantalla -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-table me-2"></i>Edición Directa y Gestor de Alumnos Inscritos
+            </h5>
+            <button type="button" class="btn btn-sm btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalEditarAlumno" onclick="prepararNuevoAlumno()">
+                <i class="bi bi-plus-lg me-1"></i> Agregar Registro
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-3">Matrícula</th>
+                            <th>Nombre(s)</th>
+                            <th>Apellidos</th>
+                            <th>Grupo</th>
+                            <th class="text-center">Acciones en Pantalla</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var alumno in Model.AlumnosRegistrados)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">@alumno.Matricula</td>
+                                <td class="fw-bold text-dark">@alumno.Nombre</td>
+                                <td>@alumno.Apellidos</td>
+                                <td><span class="badge bg-light text-dark border">@alumno.NombreGrupo</span></td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                onclick="cargarDatosEdicion(@alumno.IdEstudiante, '@alumno.Matricula', '@alumno.Nombre', '@alumno.Apellidos', '@alumno.NombreGrupo')">
+                                            <i class="bi bi-pencil-square me-1"></i> Editar
+                                        </button>
+                                        <form asp-controller="Secretaria" asp-action="EliminarAlumno" method="post" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar a @alumno.Nombre @alumno.Apellidos?');">
+                                            <input type="hidden" name="idEstudiante" value="@alumno.IdEstudiante" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar registro">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- 5.2 Panel de Alumnos Vulnerables (Solo Lectura) -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
@@ -183,7 +242,7 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Matrícula</th>
+                            <th class="ps-3">Matrícula</th>
                             <th>Alumno</th>
                             <th>Grupo</th>
                             <th>Tutor Responsable</th>
@@ -195,7 +254,7 @@
                         @foreach (var alumno in Model.AlumnosVulnerables)
                         {
                             <tr>
-                                <td class="fw-bold text-muted">@alumno.Matricula</td>
+                                <td class="ps-3 fw-bold text-muted">@alumno.Matricula</td>
                                 <td class="fw-bold text-dark">@alumno.NombreCompleto</td>
                                 <td><span class="badge bg-light text-dark border">@alumno.NombreGrupo</span></td>
                                 <td>@alumno.NombreTutor</td>
@@ -213,3 +272,71 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Edición / Adición Manual de Alumno -->
+<div class="modal fade" id="modalEditarAlumno" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Secretaria" asp-action="GuardarAlumno" method="post">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold" id="modalAlumnoTitulo">
+                        <i class="bi bi-person-lines-fill me-2"></i>Gestor de Alumno
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editIdEstudiante" name="IdEstudiante" value="0" />
+
+                    <div class="mb-3">
+                        <label for="editMatricula" class="form-label fw-bold small text-muted">Matrícula UTTT <span class="text-danger">*</span></label>
+                        <input type="text" id="editMatricula" name="Matricula" class="form-control form-control-lg" placeholder="Ej. 23301133" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editNombre" class="form-label fw-bold small text-muted">Nombre(s) <span class="text-danger">*</span></label>
+                        <input type="text" id="editNombre" name="Nombre" class="form-control" placeholder="Ej. Alan Santiago" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editApellidos" class="form-label fw-bold small text-muted">Apellidos <span class="text-danger">*</span></label>
+                        <input type="text" id="editApellidos" name="Apellidos" class="form-control" placeholder="Ej. Molina" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editNombreGrupo" class="form-label fw-bold small text-muted">Grupo Asignado <span class="text-danger">*</span></label>
+                        <input type="text" id="editNombreGrupo" name="NombreGrupo" class="form-control" placeholder="Ej. 9IDGS-G2" required />
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">
+                        <i class="bi bi-save me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function prepararNuevoAlumno() {
+        document.getElementById('editIdEstudiante').value = "0";
+        document.getElementById('editMatricula').value = "";
+        document.getElementById('editNombre').value = "";
+        document.getElementById('editApellidos').value = "";
+        document.getElementById('editNombreGrupo').value = "9IDGS-G2";
+        document.getElementById('modalAlumnoTitulo').innerHTML = '<i class="bi bi-person-plus-fill me-2"></i>Agregar Alumno Manualmente';
+    }
+
+    function cargarDatosEdicion(id, matricula, nombre, apellidos, grupo) {
+        document.getElementById('editIdEstudiante').value = id;
+        document.getElementById('editMatricula').value = matricula;
+        document.getElementById('editNombre').value = nombre;
+        document.getElementById('editApellidos').value = apellidos;
+        document.getElementById('editNombreGrupo').value = grupo;
+        document.getElementById('modalAlumnoTitulo').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Datos del Alumno';
+        
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarAlumno'));
+        modal.show();
+    }
+</script>
