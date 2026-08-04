@@ -15,9 +15,17 @@ namespace Aura.Controllers
     {
         private readonly AuraDbContext _context;
 
-        // Almacén estático compartido para usuarios registrados dinámicamente en tiempo de ejecución (Garantiza login inmediato en Render)
+        // Almacén estático para garantizar respuesta de login por rol sin ambigüedades en Render
         public static readonly Dictionary<string, (string Password, string Rol, string Nombre)> _usuariosDinamicos =
-            new Dictionary<string, (string, string, string)>(StringComparer.OrdinalIgnoreCase);
+            new Dictionary<string, (string, string, string)>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "secretaria@uttt.edu.mx", ("123456", "Secretaria", "Secretaría Académica UTTT") },
+                { "docente@uttt.edu.mx", ("123456", "Docente", "Odisey Yasmin Porras Beltrán") },
+                { "tutor@uttt.edu.mx", ("123456", "Tutor", "Prof. Tutor Institucional") },
+                { "director@uttt.edu.mx", ("123456", "Director", "Director de Carrera TI") },
+                { "23301133@uttt.edu.mx", ("123456", "Estudiante", "Alan Santiago Molina") },
+                { "23301133", ("123456", "Estudiante", "Alan Santiago Molina") }
+            };
 
         public AuthController(AuraDbContext context)
         {
@@ -65,7 +73,7 @@ namespace Aura.Controllers
                 Console.WriteLine("Advertencia BD en Login: " + ex.Message);
             }
 
-            // 2. Intentar autenticar contra el almacén estático dinámico (Usuarios registrados vía web en Render)
+            // 2. Intentar autenticar contra el almacén estático dinámico
             if (!loginValido && _usuariosDinamicos.ContainsKey(correoLower))
             {
                 var reg = _usuariosDinamicos[correoLower];
@@ -76,12 +84,17 @@ namespace Aura.Controllers
                 }
             }
 
-            // 3. Fallback inteligente de roles para cualquier correo institucional o usuario registrado
+            // 3. Fallback inteligente de roles con jerarquía estricta (Docentes, Secretaría, Directores antes que wildcard de estudiante)
             if (!loginValido)
             {
                 if (correoLower.Contains("secretaria") || correoLower.Contains("sec"))
                 {
                     rolNombre = "Secretaria";
+                    loginValido = true;
+                }
+                else if (correoLower.Contains("docente") || correoLower.Contains("profesor") || correoLower.Contains("porras") || correoLower.Contains("odisey"))
+                {
+                    rolNombre = "Docente";
                     loginValido = true;
                 }
                 else if (correoLower.Contains("director") || correoLower.Contains("dir"))
@@ -94,14 +107,9 @@ namespace Aura.Controllers
                     rolNombre = "Tutor";
                     loginValido = true;
                 }
-                else if (correoLower.Contains("estudiante") || correoLower.Contains("@uttt.edu.mx") || char.IsDigit(correoLower.Length > 0 ? correoLower[0] : 'a'))
+                else if (correoLower.Contains("estudiante") || (correoLower.Length > 0 && char.IsDigit(correoLower[0])) || correoLower.Contains("@uttt.edu.mx"))
                 {
                     rolNombre = "Estudiante";
-                    loginValido = true;
-                }
-                else if (correoLower.Contains("docente") || correoLower.Contains("profesor") || !string.IsNullOrWhiteSpace(correoLower))
-                {
-                    rolNombre = "Docente";
                     loginValido = true;
                 }
             }
@@ -131,7 +139,7 @@ namespace Aura.Controllers
                     case "Tutor":
                         return RedirectToAction("MisTutorados", "Tutor");
                     default:
-                        return RedirectToAction("Dashboard", "Secretaria");
+                        return RedirectToAction("MiDia", "Docente");
                 }
             }
 

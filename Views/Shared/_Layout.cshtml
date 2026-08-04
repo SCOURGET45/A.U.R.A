@@ -69,9 +69,12 @@
                     </ul>
 
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-outline-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalRegistrarUsuario">
-                            <i class="bi bi-person-plus-fill me-1"></i> Registrar Usuario
-                        </button>
+                        @if (User.IsInRole("Secretaria") || Context.Request.Path.Value?.Contains("Secretaria", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            <button type="button" class="btn btn-outline-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalRegistrarUsuario">
+                                <i class="bi bi-person-plus-fill me-1"></i> Registrar Usuario
+                            </button>
+                        }
                         <button type="button" class="btn btn-warning btn-sm text-dark fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCambiarPassword">
                             <i class="bi bi-key-fill me-1"></i> Cambiar Contraseña
                         </button>
