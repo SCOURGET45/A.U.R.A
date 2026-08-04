@@ -103,8 +103,8 @@
                             @if (clase.EstadoFase == "En Curso")
                             {
                                 <button class="btn btn-success w-100 fw-bold pulse-btn"
-                                        onclick="emitirUltrasonido(this, @clase.IdSesion)">
-                                    <i class="bi bi-broadcast me-1"></i> Emitir Tono Ultrasónico (19.5 kHz)
+                                        onclick="toggleUltrasonido(this, @clase.IdSesion)">
+                                    <i class="bi bi-broadcast me-1"></i> Emitir Tono Ultrasónico (19.5 kHz) - ENCENDER
                                 </button>
                             }
                             else if (clase.EstadoFase == "Completada")
@@ -190,34 +190,46 @@
 </div>
 
 <script>
-    function emitirUltrasonido(botonElemento, idSesion) {
-        const textoOriginal = botonElemento.innerHTML;
-        botonElemento.innerHTML = '<i class="bi bi-soundwave"></i> Emitiendo Tono 19.5 kHz (10s)...';
-        botonElemento.classList.replace('btn-success', 'btn-warning');
-        botonElemento.disabled = true;
+    let audioCtxDocente = null;
+    let osciladorDocente = null;
+    let esEmitiendoTono = false;
 
-        try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const oscilador = audioCtx.createOscillator();
-            const ganancia = audioCtx.createGain();
+    function toggleUltrasonido(botonElemento, idSesion) {
+        if (!esEmitiendoTono) {
+            try {
+                audioCtxDocente = new (window.AudioContext || window.webkitAudioContext)();
+                osciladorDocente = audioCtxDocente.createOscillator();
+                const ganancia = audioCtxDocente.createGain();
 
-            oscilador.type = 'sine';
-            oscilador.frequency.value = 19500;
+                osciladorDocente.type = 'sine';
+                osciladorDocente.frequency.value = 19500;
 
-            oscilador.connect(ganancia);
-            ganancia.connect(audioCtx.destination);
-            oscilador.start();
+                osciladorDocente.connect(ganancia);
+                ganancia.connect(audioCtxDocente.destination);
+                osciladorDocente.start();
 
-            setTimeout(() => {
-                oscilador.stop();
-                audioCtx.close();
+                esEmitiendoTono = true;
+                botonElemento.innerHTML = '<i class="bi bi-stop-circle-fill me-1"></i> DETENER Tono Ultrasónico (19.5 kHz) - APAGAR';
+                botonElemento.classList.replace('btn-success', 'btn-danger');
+                botonElemento.classList.add('blink-soft');
+            } catch (e) {
+                console.error("Error al emitir sonido:", e);
+            }
+        } else {
+            try {
+                if (osciladorDocente) {
+                    osciladorDocente.stop();
+                    osciladorDocente.disconnect();
+                }
+                if (audioCtxDocente) {
+                    audioCtxDocente.close();
+                }
+            } catch (e) { }
 
-                botonElemento.innerHTML = '<i class="bi bi-check-circle-fill"></i> Tono Emitido - Lista Abierta';
-                botonElemento.classList.replace('btn-warning', 'btn-success');
-                botonElemento.disabled = false;
-            }, 10000);
-        } catch (e) {
-            console.log("AudioContext fallback active.");
+            esEmitiendoTono = false;
+            botonElemento.innerHTML = '<i class="bi bi-broadcast me-1"></i> Emitir Tono Ultrasónico (19.5 kHz) - ENCENDER';
+            botonElemento.classList.replace('btn-danger', 'btn-success');
+            botonElemento.classList.remove('blink-soft');
         }
     }
 
