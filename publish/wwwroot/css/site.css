@@ -1,0 +1,121 @@
+/* UTTT Institutional Design System & Theme CSS */
+:root {
+    --uttt-green: #006837;
+    --uttt-green-dark: #004D25;
+    --uttt-green-light: #008744;
+    --uttt-gold: #E6A100;
+    --uttt-gold-light: #FFD54F;
+    --uttt-bg: #F4F7F6;
+    --uttt-dark: #1A252C;
+    --uttt-card-border: #E2E8F0;
+}
+
+body {
+    background-color: var(--uttt-bg);
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: var(--uttt-dark);
+}
+
+/* Navbar UTTT Styling */
+.navbar-uttt {
+    background: linear-gradient(135deg, var(--uttt-green-dark) 0%, var(--uttt-green) 50%, var(--uttt-green-light) 100%);
+    box-shadow: 0 4px 12px rgba(0, 104, 55, 0.2);
+}
+
+.navbar-uttt .navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.navbar-uttt .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    padding: 6px 12px !important;
+}
+
+.navbar-uttt .nav-link:hover, .navbar-uttt .nav-link.active {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+/* Custom UTTT Buttons */
+.btn-uttt {
+    background-color: var(--uttt-green);
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.btn-uttt:hover, .btn-uttt:focus {
+    background-color: var(--uttt-green-dark);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 104, 55, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-uttt-gold {
+    background-color: var(--uttt-gold);
+    color: #1A252C;
+    font-weight: 700;
+    border: none;
+}
+
+.btn-uttt-gold:hover {
+    background-color: #d49300;
+    color: #000000;
+}
+
+/* UTTT Header Badges & Cards */
+.bg-uttt-green {
+    background-color: var(--uttt-green) !important;
+}
+
+.bg-uttt-dark {
+    background-color: var(--uttt-green-dark) !important;
+}
+
+.text-uttt-green {
+    color: var(--uttt-green) !important;
+}
+
+.border-uttt-green {
+    border-color: var(--uttt-green) !important;
+}
+
+.uttt-card-header {
+    background: linear-gradient(90deg, var(--uttt-green-dark) 0%, var(--uttt-green) 100%);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Footer UTTT */
+.footer-uttt {
+    background-color: var(--uttt-green-dark);
+    color: rgba(255, 255, 255, 0.8);
+    border-top: 3px solid var(--uttt-gold);
+}
+
+/* Micro Animations & Hover Effects */
+.card-hover {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 104, 55, 0.12) !important;
+}
+
+/* Pulse animation for active ultrasonics */
+.pulse-btn {
+    animation: pulse-uttt 2.5s infinite;
+}
+
+@keyframes pulse-uttt {
+    0% { box-shadow: 0 0 0 0 rgba(0, 104, 55, 0.6); }
+    70% { box-shadow: 0 0 0 15px rgba(0, 104, 55, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 104, 55, 0); }
+}

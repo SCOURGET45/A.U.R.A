@@ -35,6 +35,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRGlyZWN0b3JcQmFuZGVqYVZ1bG5lcmFiaWxpZGFkZXMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Proyectos/A.U.R.A/Views/Director/MonitorGeneral.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRGlyZWN0b3JcTW9uaXRvckdlbmVyYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Proyectos/A.U.R.A/Views/Docente/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRG9jZW50ZVxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -43,12 +47,32 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRG9jZW50ZVxNaURpYS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Proyectos/A.U.R.A/Views/Docente/MisGrupos.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRG9jZW50ZVxNaXNHcnVwb3MuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Proyectos/A.U.R.A/Views/Docente/ReporteSemanal.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRG9jZW50ZVxSZXBvcnRlU2VtYW5hbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Proyectos/A.U.R.A/Views/Estudiante/Dashboard.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRXN0dWRpYW50ZVxEYXNoYm9hcmQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Proyectos/A.U.R.A/Views/Secretaria/ConfigurarUnidades.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2VjcmV0YXJpYVxDb25maWd1cmFyVW5pZGFkZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Proyectos/A.U.R.A/Views/Secretaria/Dashboard.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2VjcmV0YXJpYVxEYXNoYm9hcmQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Proyectos/A.U.R.A/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Proyectos/A.U.R.A/Views/Tutor/EmitirJustificante.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHV0b3JcRW1pdGlySnVzdGlmaWNhbnRlLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Proyectos/A.U.R.A/Views/Tutor/MisTutorados.cshtml]
@@ -57,4 +81,12 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Proyectos/A.U.R.A/Views/Tutor/SolicitarVulnerabilidad.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHV0b3JcU29saWNpdGFyVnVsbmVyYWJpbGlkYWQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Proyectos/A.U.R.A/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Proyectos/A.U.R.A/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
