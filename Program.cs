@@ -5,11 +5,19 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://0.0.0.0:5000");
+// Deshabilitar FileSystemWatcher (reloadOnChange) para evitar Exit Status 139 en contenedores Linux / Render
+builder.Configuration.Sources.Clear();
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+    .AddEnvironmentVariables();
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 builder.Services.AddDbContext<AuraDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -26,31 +34,25 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
-// Asegúrate de tener esto arriba (antes del builder.Build())
 builder.Services.AddControllersWithViews();
-// Añadir Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Habilitar archivos estáticos (como el CSS de Bootstrap que pusiste en la vista)
 app.UseStaticFiles();
 app.UseRouting();
 
-// Habilitar Swagger UI
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "A.U.R.A. v1");
-    c.RoutePrefix = "swagger"; // Ruta: /swagger
+    c.RoutePrefix = "swagger";
 });
 
-// Tus servicios de seguridad
 app.UseAuthentication();
 app.UseAuthorization();
 
-// EL RUTEO PRINCIPAL: Aquí le decimos que empiece en Auth/Login
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Auth}/{action=Login}/{id?}");

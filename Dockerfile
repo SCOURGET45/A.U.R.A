@@ -4,6 +4,11 @@ WORKDIR /app
 EXPOSE 80
 EXPOSE 443
 
+ENV PORT=8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+ENV ASPNETCORE_hostBuilder__reloadConfigOnChange=false
+
 # Imagen del SDK para compilar la aplicación
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
