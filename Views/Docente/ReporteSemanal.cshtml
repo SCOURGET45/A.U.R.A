@@ -1,5 +1,7 @@
 @{
     ViewData["Title"] = "F-DC-02/R5 Control de Asistencias y Evaluaciones - UTTT";
+    var alumnos = ViewBag.Alumnos as List<Aura.Controllers.AlumnoMonitorDto> ?? new List<Aura.Controllers.AlumnoMonitorDto>();
+    var historial = ViewBag.Historial as Dictionary<string, string> ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }
 
 <style>
@@ -62,14 +64,14 @@
             <p class="text-muted mb-0">Sábana Institucional de Control de Asistencias y Evaluaciones por Grupo y Asignatura.</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="/Docente/DescargarReporteExcel?grupo=9IDGS-G2" class="btn btn-success fw-bold">
+            <a href="/Docente/DescargarReporteExcel?grupo=@(ViewBag.Grupo ?? "9IDGS-G2")" class="btn btn-success fw-bold">
                 <i class="bi bi-file-earmark-excel-fill me-1"></i> Descargar Excel (ClosedXML)
             </a>
             <button type="button" class="btn btn-primary fw-bold" onclick="window.print()">
                 <i class="bi bi-printer-fill me-1"></i> Imprimir / Guardar PDF
             </button>
-            <a href="/Docente/MisGrupos" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Volver a Mis Grupos
+            <a href="/Docente/MiDia" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver a Mi Día
             </a>
         </div>
     </div>
@@ -105,12 +107,12 @@
         <div class="row g-2 mb-3" style="font-size: 0.82rem; font-weight: 600;">
             <div class="col-8">
                 <div><span class="fw-bold">Programa Educativo :</span> TECNOLOGÍAS DE LA INFORMACIÓN, INGENIERÍA EN DESARROLLO Y GESTIÓN DE SOFTWARE</div>
-                <div><span class="fw-bold">Asignatura :</span> ADMINISTRACIÓN DE PROYECTOS DE TI</div>
+                <div><span class="fw-bold">Asignatura :</span> @(ViewBag.Asignatura ?? "ADMINISTRACIÓN DE PROYECTOS DE TI")</div>
                 <div><span class="fw-bold">Cuatrimestre :</span> NOVENO CUATRIMESTRE</div>
                 <div><span class="fw-bold">Docente :</span> Odisey Yasmin Porras Beltrán</div>
             </div>
             <div class="col-4 text-end">
-                <div><span class="fw-bold">Grupo :</span> <span class="fs-6 fw-bold text-primary">9IDGS-G2</span></div>
+                <div><span class="fw-bold">Grupo :</span> <span class="fs-6 fw-bold text-primary">@(ViewBag.Grupo ?? "9IDGS-G2")</span></div>
                 <div><span class="fw-bold">Periodo :</span> MAYO - AGOSTO 2026</div>
             </div>
         </div>
@@ -149,49 +151,63 @@
                 </thead>
                 <tbody>
                     @{
-                        var listaAlumnos = new[] {
-                            "ALAN SANTIAGO MOLINA", "ALBERTO CRUZ ZEPEDA", "ALDO ALEXIS MEZA ARGUELLES",
-                            "BRIDGED CITLALI CORNEJO YAÑEZ", "CHRISTOPHER CAMARGO GONZALEZ", "DELIA LESLIE JIMENEZ NERI",
-                            "DIEGO PARRA CRUZ", "DORIAN ALEJANDRO TREJO VEGA", "FATIMA XIMENA GARCIA GONZALEZ",
-                            "FELICITAS RUBI DIEGO GARCIA", "JESSUI FLORES PACHECO", "JOSE DE JESUS LOPEZ ISLAS",
-                            "LEONARDO ISAAC BARRERA TEJEDA", "LIZETH PEREZ ATANACIO", "MARIA DEL ROCIO CRUZ CERVANTES",
-                            "MARISOL GONZALEZ VILLA", "MELANIE JOLIEE BONILLA DOMINGUEZ", "OMAR PICAZO ARANZOLO",
-                            "OSCAR JOSE SALINAS ESCOBAR", "RODRIGO DOMINGUEZ CRESPO", "RODRIGO SANCHEZ CRUZ",
-                            "VICTOR MANUEL RUFIN PIÑA", "YAEL MONROY CRUZ"
-                        };
                         int idx = 1;
                     }
 
-                    @foreach (var alumno in listaAlumnos)
+                    @foreach (var alumno in alumnos)
                     {
-                        bool esRiesgo = idx == 4 || idx == 14;
-                        bool tieneRetardo = idx % 3 == 0;
-                        bool tieneJustificante = idx == 1 || idx == 10;
+                        string cleanMat = alumno.Matricula.Split('@')[0].Trim();
 
                         int tc = 20;
-                        int ta = esRiesgo ? 14 : (tieneRetardo ? 18 : 19);
-                        int tf = tc - ta;
-                        double pct = Math.Round(((double)ta / tc) * 100, 1);
+                        int ta = 0;
+                        int tf = 0;
 
-                        <tr style="@(esRiesgo ? "background-color: #fee2e2;" : "")">
+                        <tr id="row-alumno-@alumno.Matricula">
                             <td class="fw-bold">@idx</td>
-                            <td class="text-start ps-2 fw-semibold">@alumno</td>
-                            <!-- Semana 1 -->
-                            <td>.</td><td>.</td><td>.</td><td>.</td>
-                            <!-- Semana 2 -->
-                            <td>.</td><td>@(tieneRetardo ? "X" : ".")</td><td>.</td><td>.</td>
-                            <!-- Semana 3 -->
-                            <td>.</td><td>.</td><td>@(esRiesgo ? "/" : ".")</td><td>.</td>
-                            <!-- Semana 4 -->
-                            <td>.</td><td>@(tieneJustificante ? "+=" : ".")</td><td>.</td><td>.</td>
-                            <!-- Semana 5 -->
-                            <td>.</td><td>.</td><td>@(esRiesgo ? "/" : ".")</td><td>.</td>
+                            <td class="text-start ps-2 fw-semibold">
+                                @alumno.NombreCompleto
+                                <br /><small class="text-muted fw-normal" style="font-size: 0.7rem;">Matrícula: @cleanMat</small>
+                            </td>
+
+                            @for (int sem = 1; sem <= 5; sem++)
+                            {
+                                for (int dia = 1; dia <= 4; dia++)
+                                {
+                                    string key = $"{cleanMat}_S{sem}_D{dia}";
+                                    string marca = ".";
+
+                                    if (historial.ContainsKey(key))
+                                    {
+                                        marca = historial[key];
+                                    }
+                                    else
+                                    {
+                                        // Mock fallback para mantener sábana visual completa antes de concluir días futuros
+                                        if (sem == 2 && dia == 3 && (idx % 3 == 0)) marca = "X";
+                                        else if (sem == 3 && dia == 3 && (idx == 4 || idx == 17)) marca = "/";
+                                        else if (sem == 4 && dia == 2 && (idx == 1 || idx == 13)) marca = "+=";
+                                        else if (sem == 5 && dia == 3 && (idx == 4 || idx == 17)) marca = "/";
+                                    }
+
+                                    if (marca == "." || marca == "+=" || marca == "X") { ta++; }
+                                    else if (marca == "/") { tf++; }
+
+                                    string celdaBg = marca == "/" ? "bg-danger bg-opacity-25 text-danger fw-bold" : (marca == "X" ? "bg-warning bg-opacity-25 text-dark fw-bold" : (marca == "+=" ? "bg-info bg-opacity-25 text-info fw-bold" : ""));
+
+                                    <td class="@celdaBg">@marca</td>
+                                }
+                            }
+
+                            @{
+                                double pct = tc > 0 ? Math.Round(((double)ta / tc) * 100, 1) : 100.0;
+                                bool esRiesgo = pct < 80;
+                            }
 
                             <!-- Totales -->
                             <td class="fw-bold">@tc</td>
                             <td class="fw-bold text-success">@ta</td>
                             <td class="fw-bold @(tf > 3 ? "text-danger" : "text-muted")">@tf</td>
-                            <td class="fw-bold @(pct < 80 ? "text-danger" : "text-dark")">@pct%</td>
+                            <td class="fw-bold @(esRiesgo ? "text-danger bg-danger bg-opacity-10" : "text-dark")">@pct%</td>
                         </tr>
                         idx++;
                     }

@@ -28,6 +28,118 @@ namespace Aura.Controllers
             _context = context;
         }
 
+        // Helper para obtener alumnos unificados del grupo sin duplicados
+        public List<AlumnoMonitorDto> ObtenerAlumnosUnificados(string grupo = "9IDGS-G2")
+        {
+            var grupoOficial9IDGS = new[]
+            {
+                new { id = 1, mat = "23301133", nom = "ALAN SANTIAGO MOLINA" },
+                new { id = 2, mat = "23301145", nom = "MARÍA FERNANDA GÓMEZ" },
+                new { id = 3, mat = "23301199", nom = "CARLOS EDUARDO PÉREZ" },
+                new { id = 4, mat = "23301201", nom = "DANIELA RÍOS CÁRDENAS" },
+                new { id = 5, mat = "23301205", nom = "ALBERTO CRUZ ZEPEDA" },
+                new { id = 6, mat = "23301206", nom = "ALDO ALEXIS MEZA ARGUELLES" },
+                new { id = 7, mat = "23301210", nom = "BRIDGED CITLALI CORNEJO YAÑEZ" },
+                new { id = 8, mat = "23301211", nom = "CHRISTOPHER CAMARGO GONZALEZ" },
+                new { id = 9, mat = "23301215", nom = "DELIA LESLIE JIMENEZ NERI" },
+                new { id = 10, mat = "23301216", nom = "DIEGO PARRA CRUZ" },
+                new { id = 11, mat = "23301220", nom = "DORIAN ALEJANDRO TREJO VEGA" },
+                new { id = 12, mat = "23301221", nom = "FATIMA XIMENA GARCIA GONZALEZ" },
+                new { id = 13, mat = "23301225", nom = "FELICITAS RUBI DIEGO GARCIA" },
+                new { id = 14, mat = "23301230", nom = "JESSUI FLORES PACHECO" },
+                new { id = 15, mat = "23301231", nom = "JOSE DE JESUS LOPEZ ISLAS" },
+                new { id = 16, mat = "23301235", nom = "LEONARDO ISAAC BARRERA TEJEDA" },
+                new { id = 17, mat = "23301236", nom = "LIZETH PEREZ ATANACIO" },
+                new { id = 18, mat = "23301240", nom = "MARIA DEL ROCIO CRUZ CERVANTES" },
+                new { id = 19, mat = "23301241", nom = "MARISOL GONZALEZ VILLA" },
+                new { id = 20, mat = "23301245", nom = "MELANIE JOLIEE BONILLA DOMINGUEZ" },
+                new { id = 21, mat = "23301246", nom = "OMAR PICAZO ARANZOLO" },
+                new { id = 22, mat = "23301250", nom = "OSCAR JOSE SALINAS ESCOBAR" },
+                new { id = 23, mat = "23301251", nom = "RODRIGO DOMINGUEZ CRESPO" },
+                new { id = 24, mat = "23301255", nom = "RODRIGO SANCHEZ CRUZ" },
+                new { id = 25, mat = "23301256", nom = "VICTOR MANUEL RUFIN PIÑA" },
+                new { id = 26, mat = "23301260", nom = "YAEL MONROY CRUZ" }
+            };
+
+            var listaCompleta = new List<AlumnoMonitorDto>();
+            var matriculasAgregadas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var nombresAgregados = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // 1. Alumnos dinámicos de Secretaría
+            try
+            {
+                foreach (var am in SecretariaController._alumnosMemoria)
+                {
+                    string nomCompleto = $"{am.Nombre} {am.Apellidos}".Trim();
+                    string normNom = AsistenciaController.NormalizarTexto(nomCompleto);
+                    string matClean = am.Matricula.Split('@')[0].Trim();
+
+                    if (matriculasAgregadas.Add(matClean) && (string.IsNullOrEmpty(normNom) || nombresAgregados.Add(normNom)))
+                    {
+                        listaCompleta.Add(new AlumnoMonitorDto
+                        {
+                            IdEstudiante = am.IdEstudiante,
+                            Matricula = matClean,
+                            NombreCompleto = nomCompleto,
+                            Grupo = am.NombreGrupo,
+                            TieneTolerancia = am.Matricula == "23301133" || am.Matricula == "23301145"
+                        });
+                    }
+                }
+            }
+            catch { }
+
+            // 2. Alumnos BD
+            try
+            {
+                var estudiantesDb = _context.Estudiantes
+                    .Include(e => e.Grupo)
+                    .Where(e => e.Grupo == null || e.Grupo.NombreGrupo == grupo || grupo == "9IDGS-G2")
+                    .ToList();
+
+                foreach (var e in estudiantesDb)
+                {
+                    string nomCompleto = $"{e.Nombre} {e.Apellidos}".Trim();
+                    string normNom = AsistenciaController.NormalizarTexto(nomCompleto);
+                    string matClean = e.Matricula.Split('@')[0].Trim();
+
+                    if (matriculasAgregadas.Add(matClean) && (string.IsNullOrEmpty(normNom) || nombresAgregados.Add(normNom)))
+                    {
+                        listaCompleta.Add(new AlumnoMonitorDto
+                        {
+                            IdEstudiante = e.IdEstudiante,
+                            Matricula = matClean,
+                            NombreCompleto = nomCompleto,
+                            Grupo = e.Grupo?.NombreGrupo ?? grupo,
+                            TieneTolerancia = e.TieneToleranciaActiva
+                        });
+                    }
+                }
+            }
+            catch { }
+
+            // 3. Roster oficial
+            foreach (var item in grupoOficial9IDGS)
+            {
+                string normNom = AsistenciaController.NormalizarTexto(item.nom);
+                string matClean = item.mat.Split('@')[0].Trim();
+
+                if (matriculasAgregadas.Add(matClean) && nombresAgregados.Add(normNom))
+                {
+                    listaCompleta.Add(new AlumnoMonitorDto
+                    {
+                        IdEstudiante = item.id,
+                        Matricula = matClean,
+                        NombreCompleto = item.nom,
+                        Grupo = grupo,
+                        TieneTolerancia = item.mat == "23301133" || item.mat == "23301145"
+                    });
+                }
+            }
+
+            return listaCompleta;
+        }
+
         public IActionResult Index()
         {
             return RedirectToAction(nameof(MiDia));
@@ -37,14 +149,11 @@ namespace Aura.Controllers
         public async Task<IActionResult> MiDia()
         {
             var nombreDocente = User.Identity?.Name ?? "Odisey Yasmin Porras Beltrán";
-
             var clasesViewModel = new List<ClaseHoy>();
 
-            // Cargar clases asignadas desde Secretaría o fallback demo
             try
             {
                 var dbClases = await _context.Sesiones.ToListAsync();
-
                 if (dbClases.Any())
                 {
                     int idSesion = 1;
@@ -63,10 +172,7 @@ namespace Aura.Controllers
                     }
                 }
             }
-            catch
-            {
-                // Usar clases asignadas por Secretaría
-            }
+            catch { }
 
             if (!clasesViewModel.Any())
             {
@@ -98,7 +204,7 @@ namespace Aura.Controllers
             var model = new DocenteMiDiaViewModel
             {
                 NombreDocente = nombreDocente,
-                FechaActual = DateTime.Now,
+                FechaActual = AsistenciaController.ObtenerHoraMexico(),
                 Clases = clasesViewModel
             };
 
@@ -160,41 +266,42 @@ namespace Aura.Controllers
             return View(model);
         }
 
-        // POST: Finalizar Pase de Lista y Asentar Automáticamente en Reporte F-DC-02/R5
+        // POST: Finalizar Pase de Lista y Asentar Automáticamente en Reporte F-DC-02/R5 según el día y escaneos
         [HttpPost("FinalizarPaseLista")]
         public IActionResult FinalizarPaseLista(int semana, int diaSemana, string grupo = "9IDGS-G2")
         {
-            var listaMatriculas = new[] {
-                "23301133", "23301145", "23301199", "23301201", "23301205", "23301206",
-                "23301210", "23301211", "23301215", "23301216", "23301220", "23301221",
-                "23301225", "23301230", "23301231", "23301235", "23301236", "23301240",
-                "23301241", "23301245", "23301246", "23301250", "23301251", "23301255",
-                "23301256", "23301260"
-            };
+            var alumnos = ObtenerAlumnosUnificados(grupo);
 
             int presentes = 0;
             int faltas = 0;
+            int retardos = 0;
+            int justificados = 0;
 
-            foreach (var mat in listaMatriculas)
+            foreach (var alumno in alumnos)
             {
-                string key = $"{mat}_S{semana}_D{diaSemana}";
-                if (AsistenciaController._paseListaEnVivo.ContainsKey(mat))
+                string rawMat = alumno.Matricula.Trim();
+                string cleanMat = rawMat.Split('@')[0].Trim();
+                string key = $"{cleanMat}_S{semana}_D{diaSemana}";
+
+                if (AsistenciaController._paseListaEnVivo.ContainsKey(rawMat) || AsistenciaController._paseListaEnVivo.ContainsKey(cleanMat))
                 {
-                    var est = AsistenciaController._paseListaEnVivo[mat].Estado;
-                    if (est == "PRESENTE")
+                    var reg = AsistenciaController._paseListaEnVivo.ContainsKey(cleanMat) ?
+                        AsistenciaController._paseListaEnVivo[cleanMat] : AsistenciaController._paseListaEnVivo[rawMat];
+
+                    if (reg.Estado == "PRESENTE")
                     {
                         _historialAsistenciasFDC02[key] = ".";
                         presentes++;
                     }
-                    else if (est == "RETARDO")
+                    else if (reg.Estado == "RETARDO")
                     {
                         _historialAsistenciasFDC02[key] = "X";
-                        presentes++;
+                        retardos++;
                     }
-                    else if (est == "TOLERANCIA_ACTIVA")
+                    else if (reg.Estado == "TOLERANCIA_ACTIVA" || reg.Estado == "JUSTIFICADO")
                     {
                         _historialAsistenciasFDC02[key] = "+=";
-                        presentes++;
+                        justificados++;
                     }
                     else
                     {
@@ -204,12 +311,13 @@ namespace Aura.Controllers
                 }
                 else
                 {
-                    _historialAsistenciasFDC02[key] = "/"; // Sin escanear = Falta
+                    // Alumno no escaneó -> Falta '/'
+                    _historialAsistenciasFDC02[key] = "/";
                     faltas++;
                 }
             }
 
-            TempData["Exito"] = $"Pase de lista de la sesión concluido exitosamente ({presentes} Asistencias, {faltas} Faltas asentadas en Semana {semana} - Día {diaSemana}). Se actualizó el Reporte Oficial F-DC-02/R5.";
+            TempData["Exito"] = $"Pase de lista asentado exitosamente en Reporte F-DC-02/R5 (Semana {semana} - Día {diaSemana}): {presentes} Asistencias (.), {faltas} Faltas (/), {retardos} Retardos (X), {justificados} Justificados (+=).";
             return RedirectToAction(nameof(ReporteSemanal), new { grupo = grupo });
         }
 
@@ -217,8 +325,11 @@ namespace Aura.Controllers
         [HttpGet("ReporteSemanal")]
         public IActionResult ReporteSemanal(string grupo = "9IDGS-G2", string asignatura = "Administración de Proyectos de TI")
         {
+            var alumnos = ObtenerAlumnosUnificados(grupo);
+
             ViewBag.Grupo = grupo;
             ViewBag.Asignatura = asignatura;
+            ViewBag.Alumnos = alumnos;
             ViewBag.Historial = _historialAsistenciasFDC02;
             return View();
         }
@@ -279,53 +390,26 @@ namespace Aura.Controllers
             hdrRange.Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
             hdrRange.Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
 
-            // Alumnos del grupo
-            var listaAlumnos = new[] {
-                new { Mat = "23301133", Nom = "ALAN SANTIAGO MOLINA" },
-                new { Mat = "23301145", Nom = "MARÍA FERNANDA GÓMEZ" },
-                new { Mat = "23301199", Nom = "CARLOS EDUARDO PÉREZ" },
-                new { Mat = "23301201", Nom = "DANIELA RÍOS CÁRDENAS" },
-                new { Mat = "23301205", Nom = "ALBERTO CRUZ ZEPEDA" },
-                new { Mat = "23301206", Nom = "ALDO ALEXIS MEZA ARGUELLES" },
-                new { Mat = "23301210", Nom = "BRIDGED CITLALI CORNEJO YAÑEZ" },
-                new { Mat = "23301211", Nom = "CHRISTOPHER CAMARGO GONZALEZ" },
-                new { Mat = "23301215", Nom = "DELIA LESLIE JIMENEZ NERI" },
-                new { Mat = "23301216", Nom = "DIEGO PARRA CRUZ" },
-                new { Mat = "23301220", Nom = "DORIAN ALEJANDRO TREJO VEGA" },
-                new { Mat = "23301221", Nom = "FATIMA XIMENA GARCIA GONZALEZ" },
-                new { Mat = "23301225", Nom = "FELICITAS RUBI DIEGO GARCIA" },
-                new { Mat = "23301230", Nom = "JESSUI FLORES PACHECO" },
-                new { Mat = "23301231", Nom = "JOSE DE JESUS LOPEZ ISLAS" },
-                new { Mat = "23301235", Nom = "LEONARDO ISAAC BARRERA TEJEDA" },
-                new { Mat = "23301236", Nom = "LIZETH PEREZ ATANACIO" },
-                new { Mat = "23301240", Nom = "MARIA DEL ROCIO CRUZ CERVANTES" },
-                new { Mat = "23301241", Nom = "MARISOL GONZALEZ VILLA" },
-                new { Mat = "23301245", Nom = "MELANIE JOLIEE BONILLA DOMINGUEZ" },
-                new { Mat = "23301246", Nom = "OMAR PICAZO ARANZOLO" },
-                new { Mat = "23301250", Nom = "OSCAR JOSE SALINAS ESCOBAR" },
-                new { Mat = "23301251", Nom = "RODRIGO DOMINGUEZ CRESPO" },
-                new { Mat = "23301255", Nom = "RODRIGO SANCHEZ CRUZ" },
-                new { Mat = "23301256", Nom = "VICTOR MANUEL RUFIN PIÑA" },
-                new { Mat = "23301260", Nom = "YAEL MONROY CRUZ" }
-            };
+            var alumnos = ObtenerAlumnosUnificados(grupo);
 
             int row = 10;
             int idx = 1;
-            foreach (var item in listaAlumnos)
+            foreach (var item in alumnos)
             {
                 hoja.Cell(row, 1).Value = idx;
-                hoja.Cell(row, 2).Value = item.Nom;
+                hoja.Cell(row, 2).Value = item.NombreCompleto;
 
-                bool esRiesgo = idx == 4 || idx == 17;
-                bool tieneRet = idx % 3 == 0;
-                bool tieneJust = idx == 1 || idx == 13;
+                int tc = 0;
+                int ta = 0;
+                int tf = 0;
 
                 int colIdx = 3;
                 for (int sem = 1; sem <= 5; sem++)
                 {
                     for (int dia = 1; dia <= 4; dia++)
                     {
-                        string key = $"{item.Mat}_S{sem}_D{dia}";
+                        string cleanMat = item.Matricula.Split('@')[0].Trim();
+                        string key = $"{cleanMat}_S{sem}_D{dia}";
                         string marca = ".";
 
                         if (_historialAsistenciasFDC02.ContainsKey(key))
@@ -334,22 +418,25 @@ namespace Aura.Controllers
                         }
                         else
                         {
-                            if (colIdx == 7 && tieneRet) marca = "X";
-                            else if (colIdx == 11 && esRiesgo) marca = "/";
-                            else if (colIdx == 14 && tieneJust) marca = "+=";
-                            else if (colIdx == 19 && esRiesgo) marca = "/";
+                            // Marcas por defecto simuladas si no se ha asentado ese día
+                            if (colIdx == 7 && idx % 3 == 0) marca = "X";
+                            else if (colIdx == 11 && (idx == 4 || idx == 17)) marca = "/";
+                            else if (colIdx == 14 && (idx == 1 || idx == 13)) marca = "+=";
+                            else if (colIdx == 19 && (idx == 4 || idx == 17)) marca = "/";
                         }
 
                         hoja.Cell(row, colIdx).Value = marca;
                         hoja.Cell(row, colIdx).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
                         colIdx++;
+
+                        tc++;
+                        if (marca == "." || marca == "+=") ta++;
+                        else if (marca == "/") tf++;
+                        else if (marca == "X") ta++;
                     }
                 }
 
-                int tc = 20;
-                int ta = esRiesgo ? 14 : (tieneRet ? 18 : 19);
-                int tf = tc - ta;
-                double pct = Math.Round(((double)ta / tc) * 100, 1);
+                double pct = tc > 0 ? Math.Round(((double)ta / tc) * 100, 1) : 100.0;
 
                 hoja.Cell(row, 23).Value = tc;
                 hoja.Cell(row, 24).Value = ta;
@@ -389,7 +476,17 @@ namespace Aura.Controllers
         [HttpGet("DescargarLista/{idGrupo}")]
         public IActionResult DescargarLista(int idGrupo)
         {
-            return RedirectToAction(nameof(DescargarReporteExcel), new { grupo = idGrupo == 1 ? "9IDGS-G2" : "9IDGS-G1" });
+            var alumnos = ObtenerAlumnosUnificados("9IDGS-G2");
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("No.,Matricula,NombreCompleto,Grupo");
+            int i = 1;
+            foreach (var a in alumnos)
+            {
+                sb.AppendLine($"{i++},{a.Matricula},{a.NombreCompleto},{a.Grupo}");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+            return File(bytes, "text/csv", $"Lista_Oficial_Grupo_9IDGS-G2.csv");
         }
     }
 }
