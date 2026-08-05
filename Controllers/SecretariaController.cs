@@ -44,7 +44,7 @@ namespace Aura.Controllers
         };
 
         // Almacén persistente de Asignaciones de Clases a Docentes
-        private static readonly List<AsignacionClaseDocenteViewModel> _asignacionesClases = new List<AsignacionClaseDocenteViewModel>
+        public static readonly List<AsignacionClaseDocenteViewModel> _asignacionesClases = new List<AsignacionClaseDocenteViewModel>
         {
             new AsignacionClaseDocenteViewModel { IdAsignacion = 1, NombreDocente = "Odisey Yasmin Porras Beltrán", NombreMateria = "Administración de Proyectos de TI", NombreGrupo = "9IDGS-G2", Horario = "Lunes y Miércoles 08:00 - 10:00 hrs" },
             new AsignacionClaseDocenteViewModel { IdAsignacion = 2, NombreDocente = "Odisey Yasmin Porras Beltrán", NombreMateria = "Desarrollo Web Profesional", NombreGrupo = "9IDGS-G1", Horario = "Martes y Jueves 10:30 - 12:30 hrs" },

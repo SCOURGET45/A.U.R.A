@@ -174,25 +174,17 @@
                                 for (int dia = 1; dia <= 4; dia++)
                                 {
                                     string key = $"{cleanMat}_S{sem}_D{dia}";
-                                    string marca = ".";
+                                    string marca = "";
 
                                     if (historial.ContainsKey(key))
                                     {
                                         marca = historial[key];
-                                    }
-                                    else
-                                    {
-                                        // Mock fallback para mantener sábana visual completa antes de concluir días futuros
-                                        if (sem == 2 && dia == 3 && (idx % 3 == 0)) marca = "X";
-                                        else if (sem == 3 && dia == 3 && (idx == 4 || idx == 17)) marca = "/";
-                                        else if (sem == 4 && dia == 2 && (idx == 1 || idx == 13)) marca = "+=";
-                                        else if (sem == 5 && dia == 3 && (idx == 4 || idx == 17)) marca = "/";
+                                        tc++;
+                                        if (marca == "." || marca == "+=" || marca == "X") { ta++; }
+                                        else if (marca == "/") { tf++; }
                                     }
 
-                                    if (marca == "." || marca == "+=" || marca == "X") { ta++; }
-                                    else if (marca == "/") { tf++; }
-
-                                    string celdaBg = marca == "/" ? "bg-danger bg-opacity-25 text-danger fw-bold" : (marca == "X" ? "bg-warning bg-opacity-25 text-dark fw-bold" : (marca == "+=" ? "bg-info bg-opacity-25 text-info fw-bold" : ""));
+                                    string celdaBg = marca == "/" ? "bg-danger bg-opacity-25 text-danger fw-bold" : (marca == "X" ? "bg-warning bg-opacity-25 text-dark fw-bold" : (marca == "+=" ? "bg-info bg-opacity-25 text-info fw-bold" : (marca == "." ? "text-dark fw-bold" : "")));
 
                                     <td class="@celdaBg">@marca</td>
                                 }
@@ -200,7 +192,7 @@
 
                             @{
                                 double pct = tc > 0 ? Math.Round(((double)ta / tc) * 100, 1) : 100.0;
-                                bool esRiesgo = pct < 80;
+                                bool esRiesgo = tc > 0 && pct < 80;
                             }
 
                             <!-- Totales -->

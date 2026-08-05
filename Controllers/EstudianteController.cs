@@ -106,103 +106,73 @@ namespace Aura.Controllers
                 }
             }
 
-            // Fallback por matrícula específica en caso de ser un usuario de demostración
+            // Fallback por usuario de sesión en memoria dinámica
             if (string.IsNullOrEmpty(viewModel.NombreAlumno))
             {
-                switch (matriculaClean)
+                if (AuthController._usuariosDinamicos.ContainsKey(userEmail))
                 {
-                    case "23301145":
-                        viewModel.NombreAlumno = "MARÍA FERNANDA GÓMEZ";
-                        viewModel.Matricula = "23301145";
-                        break;
-                    case "23301199":
-                        viewModel.NombreAlumno = "CARLOS EDUARDO PÉREZ";
-                        viewModel.Matricula = "23301199";
-                        break;
-                    case "23301201":
-                        viewModel.NombreAlumno = "DANIELA RÍOS CÁRDENAS";
-                        viewModel.Matricula = "23301201";
-                        break;
-                    default:
-                        viewModel.NombreAlumno = !string.IsNullOrEmpty(userEmail) && userEmail.Contains("@") ? userEmail.Split('@')[0].ToUpper() : "ALAN SANTIAGO MOLINA";
-                        viewModel.Matricula = !string.IsNullOrEmpty(matriculaClean) ? matriculaClean : "23301133";
-                        break;
+                    viewModel.NombreAlumno = AuthController._usuariosDinamicos[userEmail].Nombre;
+                    viewModel.Matricula = matriculaClean;
+                }
+                else
+                {
+                    viewModel.NombreAlumno = !string.IsNullOrEmpty(userEmail) && userEmail.Contains("@") ? userEmail.Split('@')[0].ToUpper() : "ALAN SANTIAGO MOLINA";
+                    viewModel.Matricula = !string.IsNullOrEmpty(matriculaClean) ? matriculaClean : "23301133";
                 }
 
                 viewModel.NombreGrupo = "9IDGS-G2";
                 viewModel.TieneToleranciaActiva = viewModel.Matricula == "23301133" || viewModel.Matricula == "23301145";
                 viewModel.MinutosTolerancia = viewModel.TieneToleranciaActiva ? 30 : 0;
                 viewModel.MotivoTolerancia = viewModel.TieneToleranciaActiva ? "Tolerancia Institucional (+30m)" : string.Empty;
-                viewModel.JustificantesUsados = 1;
-                viewModel.DiasAmparados = 3;
+                viewModel.JustificantesUsados = 0;
+                viewModel.DiasAmparados = 0;
             }
 
-            // Poblado de materias para el panel del estudiante
-            if (!viewModel.MateriasActivas.Any())
+            // Cálculo 100% REAL de asistencias acumuladas del estudiante
+            string cleanMatBusqueda = viewModel.Matricula.Split('@')[0].Trim();
+
+            int totalClasesRegistradas = 0;
+            int asistenciasReales = 0;
+            int faltasReales = 0;
+            int retardosReales = 0;
+
+            foreach (var kvp in DocenteController._historialAsistenciasFDC02)
             {
-                viewModel.MateriasActivas = new List<UnidadDashboardViewModel>
+                if (kvp.Key.StartsWith($"{cleanMatBusqueda}_", StringComparison.OrdinalIgnoreCase))
                 {
-                    new UnidadDashboardViewModel
-                    {
-                        IdMateria = 1,
-                        NombreMateria = "Desarrollo Web Profesional",
-                        UnidadActual = "Unidad II: APIs RESTful y Seguridad",
-                        PorcentajeAsistencia = 92.5,
-                        Semaforo = "Verde",
-                        FaltasAcumuladas = 1,
-                        FaltasPermitidasRestantes = 3,
-                        LimiteFaltasTotal = 4,
-                        RetardosAcumulados = 2,
-                        TotalClasesUnidad = 20,
-                        ClasesAsistidas = 19
-                    },
-                    new UnidadDashboardViewModel
-                    {
-                        IdMateria = 2,
-                        NombreMateria = "Arquitectura de Software",
-                        UnidadActual = "Unidad I: Patrones de Diseño y Microservicios",
-                        PorcentajeAsistencia = 83.3,
-                        Semaforo = "Amarillo",
-                        FaltasAcumuladas = 3,
-                        FaltasPermitidasRestantes = 1,
-                        LimiteFaltasTotal = 4,
-                        RetardosAcumulados = 2,
-                        TotalClasesUnidad = 18,
-                        ClasesAsistidas = 15
-                    },
-                    new UnidadDashboardViewModel
-                    {
-                        IdMateria = 3,
-                        NombreMateria = "Administración de Proyectos de TI",
-                        UnidadActual = "Unidad II: Metodologías Ágiles y Scrum",
-                        PorcentajeAsistencia = 76.0,
-                        Semaforo = "Rojo",
-                        FaltasAcumuladas = 5,
-                        FaltasPermitidasRestantes = 0,
-                        LimiteFaltasTotal = 4,
-                        RetardosAcumulados = 1,
-                        TotalClasesUnidad = 21,
-                        ClasesAsistidas = 16
-                    },
-                    new UnidadDashboardViewModel
-                    {
-                        IdMateria = 4,
-                        NombreMateria = "Inglés IX",
-                        UnidadActual = "Unidad III: Technical Presentations",
-                        PorcentajeAsistencia = 95.0,
-                        Semaforo = "Verde",
-                        FaltasAcumuladas = 0,
-                        FaltasPermitidasRestantes = 3,
-                        LimiteFaltasTotal = 3,
-                        RetardosAcumulados = 1,
-                        TotalClasesUnidad = 16,
-                        ClasesAsistidas = 16
-                    }
-                };
-
-                viewModel.AsistenciaGlobal = Math.Round(viewModel.MateriasActivas.Average(m => m.PorcentajeAsistencia), 1);
-                viewModel.AlertasRiesgoCount = viewModel.MateriasActivas.Count(m => m.PorcentajeAsistencia < 80);
+                    totalClasesRegistradas++;
+                    string marca = kvp.Value;
+                    if (marca == "." || marca == "+=") asistenciasReales++;
+                    else if (marca == "X") { asistenciasReales++; retardosReales++; }
+                    else if (marca == "/") faltasReales++;
+                }
             }
+
+            double pctAsistenciaReal = totalClasesRegistradas > 0 ?
+                Math.Round(((double)asistenciasReales / totalClasesRegistradas) * 100, 1) : 100.0;
+
+            string semaforoReal = pctAsistenciaReal >= 90 ? "Verde" : (pctAsistenciaReal >= 80 ? "Amarillo" : "Rojo");
+
+            viewModel.MateriasActivas = new List<UnidadDashboardViewModel>
+            {
+                new UnidadDashboardViewModel
+                {
+                    IdMateria = 1,
+                    NombreMateria = "Administración de Proyectos de TI",
+                    UnidadActual = "Unidad II: Metodologías Ágiles",
+                    PorcentajeAsistencia = pctAsistenciaReal,
+                    Semaforo = semaforoReal,
+                    FaltasAcumuladas = faltasReales,
+                    FaltasPermitidasRestantes = Math.Max(0, 4 - faltasReales),
+                    LimiteFaltasTotal = 4,
+                    RetardosAcumulados = retardosReales,
+                    TotalClasesUnidad = totalClasesRegistradas,
+                    ClasesAsistidas = asistenciasReales
+                }
+            };
+
+            viewModel.AsistenciaGlobal = pctAsistenciaReal;
+            viewModel.AlertasRiesgoCount = pctAsistenciaReal < 80 ? 1 : 0;
 
             return View(viewModel);
         }

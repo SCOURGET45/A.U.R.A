@@ -148,58 +148,51 @@ namespace Aura.Controllers
         [HttpGet("MiDia")]
         public async Task<IActionResult> MiDia()
         {
-            var nombreDocente = User.Identity?.Name ?? "Odisey Yasmin Porras Beltrán";
+            string userEmail = User.Identity?.Name ?? string.Empty;
+            string nombreDocente = "Docente";
+
+            if (AuthController._usuariosDinamicos.ContainsKey(userEmail))
+            {
+                nombreDocente = AuthController._usuariosDinamicos[userEmail].Nombre;
+            }
+            else if (!string.IsNullOrEmpty(userEmail) && userEmail.Contains("@"))
+            {
+                nombreDocente = userEmail.Split('@')[0];
+            }
+            else
+            {
+                nombreDocente = "Odisey Yasmin Porras Beltrán";
+            }
+
             var clasesViewModel = new List<ClaseHoy>();
 
+            // Cargar únicamente las clases asignadas por Secretaría a este docente específico
             try
             {
-                var dbClases = await _context.Sesiones.ToListAsync();
-                if (dbClases.Any())
-                {
-                    int idSesion = 1;
-                    foreach (var s in dbClases)
-                    {
-                        clasesViewModel.Add(new ClaseHoy
-                        {
-                            IdSesion = idSesion++,
-                            Grupo = "9IDGS-G2",
-                            Materia = "Administración de Proyectos de TI",
-                            HoraInicio = s.HoraInicio,
-                            HoraFin = s.HoraFin,
-                            EstadoFase = "En Curso",
-                            AlertasVulnerabilidad = true
-                        });
-                    }
-                }
-            }
-            catch { }
+                string normNombreDocente = AsistenciaController.NormalizarTexto(nombreDocente);
 
-            if (!clasesViewModel.Any())
-            {
-                clasesViewModel = new List<ClaseHoy>
+                var asignacionesPropias = SecretariaController._asignacionesClases.Where(a =>
+                    AsistenciaController.NormalizarTexto(a.NombreDocente).Contains(normNombreDocente) ||
+                    normNombreDocente.Contains(AsistenciaController.NormalizarTexto(a.NombreDocente)) ||
+                    userEmail.Equals("docente@uttt.edu.mx", StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+
+                int idSesion = 1;
+                foreach (var asig in asignacionesPropias)
                 {
-                    new ClaseHoy
+                    clasesViewModel.Add(new ClaseHoy
                     {
-                        IdSesion = 1,
-                        Grupo = "9IDGS-G2",
-                        Materia = "Administración de Proyectos de TI",
+                        IdSesion = idSesion++,
+                        Grupo = asig.NombreGrupo,
+                        Materia = asig.NombreMateria,
                         HoraInicio = new TimeSpan(8, 0, 0),
                         HoraFin = new TimeSpan(10, 0, 0),
                         EstadoFase = "En Curso",
                         AlertasVulnerabilidad = true
-                    },
-                    new ClaseHoy
-                    {
-                        IdSesion = 2,
-                        Grupo = "9IDGS-G1",
-                        Materia = "Desarrollo Web Profesional",
-                        HoraInicio = new TimeSpan(10, 30, 0),
-                        HoraFin = new TimeSpan(12, 30, 0),
-                        EstadoFase = "En Curso",
-                        AlertasVulnerabilidad = false
-                    }
-                };
+                    });
+                }
             }
+            catch { }
 
             var model = new DocenteMiDiaViewModel
             {
@@ -214,53 +207,40 @@ namespace Aura.Controllers
         [HttpGet("MisGrupos")]
         public async Task<IActionResult> MisGrupos()
         {
-            var nombreDocente = User.Identity?.Name ?? "Odisey Yasmin Porras Beltrán";
+            string userEmail = User.Identity?.Name ?? string.Empty;
+            string nombreDocente = AuthController._usuariosDinamicos.ContainsKey(userEmail) ? AuthController._usuariosDinamicos[userEmail].Nombre : (userEmail.Contains("@") ? userEmail.Split('@')[0] : "Odisey Yasmin Porras Beltrán");
+
+            string normNombreDocente = AsistenciaController.NormalizarTexto(nombreDocente);
+            var asignacionesPropias = SecretariaController._asignacionesClases.Where(a =>
+                AsistenciaController.NormalizarTexto(a.NombreDocente).Contains(normNombreDocente) ||
+                normNombreDocente.Contains(AsistenciaController.NormalizarTexto(a.NombreDocente)) ||
+                userEmail.Equals("docente@uttt.edu.mx", StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+
+            var gruposList = new List<DocenteGrupoCardViewModel>();
+            int idGrp = 1;
+
+            foreach (var asig in asignacionesPropias)
+            {
+                gruposList.Add(new DocenteGrupoCardViewModel
+                {
+                    IdGrupo = idGrp++,
+                    NombreGrupo = asig.NombreGrupo,
+                    Carrera = "Desarrollo de Software Multiplataforma",
+                    Cuatrimestre = "Noveno Cuatrimestre",
+                    Materia = asig.NombreMateria,
+                    TotalAlumnos = 26,
+                    PromedioAsistencia = 100.0,
+                    AlumnosEnRiesgoCount = 0,
+                    RetardosConvertidosFaltasCount = 0,
+                    AlumnosWithToleranciaCount = 1
+                });
+            }
 
             var model = new DocenteMisGruposViewModel
             {
                 NombreDocente = nombreDocente,
-                Grupos = new List<DocenteGrupoCardViewModel>
-                {
-                    new DocenteGrupoCardViewModel
-                    {
-                        IdGrupo = 1,
-                        NombreGrupo = "9IDGS-G2",
-                        Carrera = "Desarrollo de Software Multiplataforma",
-                        Cuatrimestre = "Noveno Cuatrimestre",
-                        Materia = "Administración de Proyectos de TI",
-                        TotalAlumnos = 28,
-                        PromedioAsistencia = 89.2,
-                        AlumnosEnRiesgoCount = 2,
-                        RetardosConvertidosFaltasCount = 5,
-                        AlumnosWithToleranciaCount = 3
-                    },
-                    new DocenteGrupoCardViewModel
-                    {
-                        IdGrupo = 2,
-                        NombreGrupo = "9IDGS-G1",
-                        Carrera = "Desarrollo de Software Multiplataforma",
-                        Cuatrimestre = "Noveno Cuatrimestre",
-                        Materia = "Desarrollo Web Profesional",
-                        TotalAlumnos = 30,
-                        PromedioAsistencia = 92.5,
-                        AlumnosEnRiesgoCount = 1,
-                        RetardosConvertidosFaltasCount = 3,
-                        AlumnosWithToleranciaCount = 2
-                    },
-                    new DocenteGrupoCardViewModel
-                    {
-                        IdGrupo = 3,
-                        NombreGrupo = "7MEC-G1",
-                        Carrera = "Mecatrónica y Sistemas Automatizados",
-                        Cuatrimestre = "Séptimo Cuatrimestre",
-                        Materia = "Sistemas Embebidos",
-                        TotalAlumnos = 25,
-                        PromedioAsistencia = 84.0,
-                        AlumnosEnRiesgoCount = 4,
-                        RetardosConvertidosFaltasCount = 8,
-                        AlumnosWithToleranciaCount = 1
-                    }
-                }
+                Grupos = gruposList
             };
 
             return View(model);
@@ -311,7 +291,6 @@ namespace Aura.Controllers
                 }
                 else
                 {
-                    // Alumno no escaneó -> Falta '/'
                     _historialAsistenciasFDC02[key] = "/";
                     faltas++;
                 }
@@ -410,29 +389,19 @@ namespace Aura.Controllers
                     {
                         string cleanMat = item.Matricula.Split('@')[0].Trim();
                         string key = $"{cleanMat}_S{sem}_D{dia}";
-                        string marca = ".";
+                        string marca = "";
 
                         if (_historialAsistenciasFDC02.ContainsKey(key))
                         {
                             marca = _historialAsistenciasFDC02[key];
-                        }
-                        else
-                        {
-                            // Marcas por defecto simuladas si no se ha asentado ese día
-                            if (colIdx == 7 && idx % 3 == 0) marca = "X";
-                            else if (colIdx == 11 && (idx == 4 || idx == 17)) marca = "/";
-                            else if (colIdx == 14 && (idx == 1 || idx == 13)) marca = "+=";
-                            else if (colIdx == 19 && (idx == 4 || idx == 17)) marca = "/";
+                            tc++;
+                            if (marca == "." || marca == "+=" || marca == "X") ta++;
+                            else if (marca == "/") tf++;
                         }
 
                         hoja.Cell(row, colIdx).Value = marca;
                         hoja.Cell(row, colIdx).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
                         colIdx++;
-
-                        tc++;
-                        if (marca == "." || marca == "+=") ta++;
-                        else if (marca == "/") tf++;
-                        else if (marca == "X") ta++;
                     }
                 }
 
