@@ -65,7 +65,19 @@ namespace Aura.Controllers
             var matriculasAgregadas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var nombresAgregados = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 1. Alumnos dinámicos de Secretaría
+            // Identificar alumnos movidos explícitamente a OTROS grupos por Secretaría
+            var matriculasOtrosGrupos = SecretariaController._alumnosMemoria
+                .Where(a => !a.NombreGrupo.Equals(grupo, StringComparison.OrdinalIgnoreCase))
+                .Select(a => a.Matricula.Split('@')[0].Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var nombresOtrosGrupos = SecretariaController._alumnosMemoria
+                .Where(a => !a.NombreGrupo.Equals(grupo, StringComparison.OrdinalIgnoreCase))
+                .Select(a => AsistenciaController.NormalizarTexto($"{a.Nombre} {a.Apellidos}"))
+                .Where(n => !string.IsNullOrEmpty(n))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // 1. Alumnos dinámicos de Secretaría pertenecientes a ESTE grupo específico
             try
             {
                 foreach (var am in SecretariaController._alumnosMemoria.Where(a => a.NombreGrupo.Equals(grupo, StringComparison.OrdinalIgnoreCase)))
@@ -89,7 +101,7 @@ namespace Aura.Controllers
             }
             catch { }
 
-            // 2. Alumnos BD
+            // 2. Alumnos BD pertenecientes a ESTE grupo específico
             try
             {
                 var estudiantesDb = _context.Estudiantes
@@ -103,22 +115,25 @@ namespace Aura.Controllers
                     string normNom = AsistenciaController.NormalizarTexto(nomCompleto);
                     string matClean = e.Matricula.Split('@')[0].Trim();
 
-                    if (matriculasAgregadas.Add(matClean) && (string.IsNullOrEmpty(normNom) || nombresAgregados.Add(normNom)))
+                    if (!matriculasOtrosGrupos.Contains(matClean) && !nombresOtrosGrupos.Contains(normNom))
                     {
-                        listaCompleta.Add(new AlumnoMonitorDto
+                        if (matriculasAgregadas.Add(matClean) && (string.IsNullOrEmpty(normNom) || nombresAgregados.Add(normNom)))
                         {
-                            IdEstudiante = e.IdEstudiante,
-                            Matricula = matClean,
-                            NombreCompleto = nomCompleto,
-                            Grupo = e.Grupo?.NombreGrupo ?? grupo,
-                            TieneTolerancia = e.TieneToleranciaActiva
-                        });
+                            listaCompleta.Add(new AlumnoMonitorDto
+                            {
+                                IdEstudiante = e.IdEstudiante,
+                                Matricula = matClean,
+                                NombreCompleto = nomCompleto,
+                                Grupo = e.Grupo?.NombreGrupo ?? grupo,
+                                TieneTolerancia = e.TieneToleranciaActiva
+                            });
+                        }
                     }
                 }
             }
             catch { }
 
-            // 3. Roster oficial solo si el grupo coincide con 9IDGS-G2
+            // 3. Roster oficial solo si el grupo coincide con 9IDGS-G2 y el alumno no fue movido a otro grupo
             if (grupo.Equals("9IDGS-G2", StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var item in grupoOficial9IDGS)
@@ -126,16 +141,19 @@ namespace Aura.Controllers
                     string normNom = AsistenciaController.NormalizarTexto(item.nom);
                     string matClean = item.mat.Split('@')[0].Trim();
 
-                    if (matriculasAgregadas.Add(matClean) && nombresAgregados.Add(normNom))
+                    if (!matriculasOtrosGrupos.Contains(matClean) && !nombresOtrosGrupos.Contains(normNom))
                     {
-                        listaCompleta.Add(new AlumnoMonitorDto
+                        if (matriculasAgregadas.Add(matClean) && nombresAgregados.Add(normNom))
                         {
-                            IdEstudiante = item.id,
-                            Matricula = matClean,
-                            NombreCompleto = item.nom,
-                            Grupo = grupo,
-                            TieneTolerancia = item.mat == "23301133" || item.mat == "23301145"
-                        });
+                            listaCompleta.Add(new AlumnoMonitorDto
+                            {
+                                IdEstudiante = item.id,
+                                Matricula = matClean,
+                                NombreCompleto = item.nom,
+                                Grupo = grupo,
+                                TieneTolerancia = item.mat == "23301133" || item.mat == "23301145"
+                            });
+                        }
                     }
                 }
             }
