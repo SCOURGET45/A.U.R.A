@@ -188,10 +188,9 @@ namespace Aura.Controllers
 
             foreach (var alumno in listaCompleta)
             {
-                string rawMat = alumno.Matricula.Trim();
+                string rawMat = alumno.Matricula.Trim().ToLower();
                 string cleanMat = rawMat.Split('@')[0].Trim();
                 string normNombre = NormalizarTexto(alumno.NombreCompleto);
-                string normMat = NormalizarTexto(rawMat);
 
                 string estadoVal = "PENDIENTE";
                 string horaVal = null;
@@ -214,21 +213,6 @@ namespace Aura.Controllers
                 else if (_paseListaEnVivo.ContainsKey(alumno.IdEstudiante.ToString()))
                 {
                     regEncontrado = _paseListaEnVivo[alumno.IdEstudiante.ToString()];
-                }
-                else
-                {
-                    // Búsqueda cruzada por coincidencia parcial en claves de sesión
-                    foreach (var kvp in _paseListaEnVivo)
-                    {
-                        string keyNorm = NormalizarTexto(kvp.Key);
-                        if (!string.IsNullOrEmpty(keyNorm) &&
-                            (!string.IsNullOrEmpty(normMat) && (keyNorm.Contains(normMat) || normMat.Contains(keyNorm))) ||
-                            (!string.IsNullOrEmpty(normNombre) && (keyNorm.Contains(normNombre) || normNombre.Contains(keyNorm))))
-                        {
-                            regEncontrado = kvp.Value;
-                            break;
-                        }
-                    }
                 }
 
                 if (regEncontrado.HasValue)
@@ -264,20 +248,20 @@ namespace Aura.Controllers
             }
 
             string rawMat = dto.Matricula.Trim();
-            string cleanMat = rawMat.Split('@')[0].Trim();
+            string cleanMat = rawMat.Split('@')[0].Trim().ToLower();
             string normMat = NormalizarTexto(rawMat);
 
             DateTime horaActualMx = ObtenerHoraMexico();
 
-            // Guardar por rawMat, cleanMat y normMat
-            _paseListaEnVivo[rawMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+            // Guardar por rawMat, cleanMat y normMat de forma exacta
             _paseListaEnVivo[cleanMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+            _paseListaEnVivo[rawMat.ToLower()] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
             if (!string.IsNullOrEmpty(normMat))
             {
                 _paseListaEnVivo[normMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
             }
 
-            // Buscar si la matrícula o usuario pertenece a algún alumno en las listas oficiales o memoria
+            // Buscar si la matrícula o usuario pertenece a algún alumno específico en las listas oficiales
             try
             {
                 var docCtrl = new DocenteController(_context);
@@ -287,27 +271,27 @@ namespace Aura.Controllers
                     var alumnos = docCtrl.ObtenerAlumnosUnificados(g);
                     var encontrado = alumnos.FirstOrDefault(a =>
                     {
-                        string cM = a.Matricula.Split('@')[0].Trim();
+                        string cM = a.Matricula.Split('@')[0].Trim().ToLower();
                         string nN = NormalizarTexto(a.NombreCompleto);
                         string nM = NormalizarTexto(a.Matricula);
 
-                        return cM.Equals(cleanMat, StringComparison.OrdinalIgnoreCase) ||
-                               a.Matricula.Equals(rawMat, StringComparison.OrdinalIgnoreCase) ||
-                               (!string.IsNullOrEmpty(normMat) && (nM.Contains(normMat) || normMat.Contains(nM))) ||
-                               (!string.IsNullOrEmpty(normMat) && (nN.Contains(normMat) || normMat.Contains(nN)));
+                        return cM == cleanMat ||
+                               a.Matricula.Trim().ToLower() == rawMat.ToLower() ||
+                               (!string.IsNullOrEmpty(nM) && nM == normMat) ||
+                               (!string.IsNullOrEmpty(nN) && nN == normMat);
                     });
 
                     if (encontrado != null)
                     {
-                        string normNombreAlumno = NormalizarTexto(encontrado.NombreCompleto);
-                        if (!string.IsNullOrEmpty(normNombreAlumno))
-                        {
-                            _paseListaEnVivo[normNombreAlumno] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
-                        }
+                        string cleanMatEncontrado = encontrado.Matricula.Split('@')[0].Trim().ToLower();
+                        string normNombreEncontrado = NormalizarTexto(encontrado.NombreCompleto);
 
-                        string cleanMatAlumno = encontrado.Matricula.Split('@')[0].Trim();
-                        _paseListaEnVivo[cleanMatAlumno] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
-                        _paseListaEnVivo[encontrado.Matricula] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+                        _paseListaEnVivo[cleanMatEncontrado] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+                        _paseListaEnVivo[encontrado.Matricula.Trim().ToLower()] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+                        if (!string.IsNullOrEmpty(normNombreEncontrado))
+                        {
+                            _paseListaEnVivo[normNombreEncontrado] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+                        }
                         _paseListaEnVivo[encontrado.IdEstudiante.ToString()] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
                         break;
                     }
