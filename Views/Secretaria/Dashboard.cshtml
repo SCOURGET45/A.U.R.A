@@ -111,6 +111,7 @@
                                     <th>Asignatura</th>
                                     <th>Grupo</th>
                                     <th>Horario</th>
+                                    <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -121,6 +122,14 @@
                                         <td class="small"><span class="badge bg-light text-primary border">@c.NombreMateria</span></td>
                                         <td><span class="badge bg-secondary">@c.NombreGrupo</span></td>
                                         <td class="small text-muted"><i class="bi bi-clock me-1"></i>@c.Horario</td>
+                                        <td class="text-center">
+                                            <form asp-controller="Secretaria" asp-action="EliminarAsignacionClase" method="post" class="d-inline" onsubmit="return confirm('¿Deseas desasignar la materia @c.NombreMateria (@c.NombreGrupo) del profesor @c.NombreDocente?');">
+                                                <input type="hidden" name="idAsignacion" value="@c.IdAsignacion" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Quitar materia al profesor">
+                                                    <i class="bi bi-trash"></i> Quitar
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -148,6 +157,7 @@
                                     <th>Tutor Asignado</th>
                                     <th>Carrera / Programa</th>
                                     <th class="text-center">Alumnos Vinculados</th>
+                                    <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -161,6 +171,14 @@
                                             <span class="badge bg-success px-3 py-1">
                                                 <i class="bi bi-people me-1"></i> @t.TotalAlumnos alumnos
                                             </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <form asp-controller="Secretaria" asp-action="EliminarAsignacionTutor" method="post" class="d-inline" onsubmit="return confirm('¿Deseas remover la tutoría del grupo @t.NombreGrupo?');">
+                                                <input type="hidden" name="idAsignacion" value="@t.IdAsignacion" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Quitar tutoría">
+                                                    <i class="bi bi-trash"></i> Quitar
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                 }

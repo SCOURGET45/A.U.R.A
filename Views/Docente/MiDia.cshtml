@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Mi Día - Pase de Lista en Tiempo Real - UTTT";
+    string primerGrupo = Model.Clases.FirstOrDefault()?.Grupo ?? "9IDGS-G2";
 }
 
 <div class="container mt-4">
@@ -29,7 +30,7 @@
     <div class="card border-0 shadow-sm mb-4 bg-light">
         <div class="card-body p-3">
             <form asp-controller="Docente" asp-action="FinalizarPaseLista" method="post" class="row align-items-center g-3">
-                <input type="hidden" name="grupo" value="9IDGS-G2" />
+                <input type="hidden" name="grupo" id="hiddenGrupoFinalizar" value="@primerGrupo" />
                 <div class="col-md-3">
                     <label class="form-label fw-bold small text-muted mb-1"><i class="bi bi-calendar3 me-1"></i>Semana del Cuatrimestre</label>
                     <select name="semana" class="form-select fw-bold border-primary" required>
@@ -63,7 +64,8 @@
         @if (!Model.Clases.Any())
         {
             <div class="col-12 text-center text-muted mt-5">
-                <h4><i class="bi bi-cup-hot"></i> No tienes clases programadas para hoy.</h4>
+                <h4><i class="bi bi-cup-hot"></i> No tienes clases asignadas por Secretaría en este momento.</h4>
+                <p class="small text-muted">Contacta a la Secretaría de Carrera para la asignación de tus materias y grupos.</p>
             </div>
         }
         else
@@ -100,7 +102,7 @@
 
                         <div class="card-footer bg-transparent border-top-0 pb-3">
                             <button class="btn btn-success w-100 fw-bold pulse-btn"
-                                    onclick="toggleUltrasonido(this, @clase.IdSesion)">
+                                    onclick="toggleUltrasonido(this, @clase.IdSesion, '@clase.Grupo')">
                                 <i class="bi bi-broadcast me-1"></i> Emitir Tono Ultrasónico (19.5 kHz) - ENCENDER
                             </button>
                         </div>
@@ -114,7 +116,7 @@
     <div class="card border-0 shadow mb-5">
         <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-bold">
-                <i class="bi bi-activity text-success me-2"></i>Monitor de Asistencia en Tiempo Real — Grupo 9IDGS-G2
+                <i class="bi bi-activity text-success me-2"></i>Monitor de Asistencia en Tiempo Real — Grupo <span id="spanNombreGrupoMonitor" class="text-warning">@primerGrupo</span>
             </h5>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-success text-white px-3 py-2 fw-bold" id="badgeActualizacion">
@@ -129,19 +131,19 @@
                 <div class="col-md-4">
                     <div class="p-3 bg-success bg-opacity-10 border border-success rounded text-center">
                         <small class="text-success text-uppercase fw-bold">Presentes al Momento</small>
-                        <h2 class="display-6 fw-bold text-success mb-0" id="cntPresentes">4</h2>
+                        <h2 class="display-6 fw-bold text-success mb-0" id="cntPresentes">0</h2>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="p-3 bg-info bg-opacity-10 border border-info rounded text-center">
                         <small class="text-info text-uppercase fw-bold">Tolerancia Activa (Director)</small>
-                        <h2 class="display-6 fw-bold text-info mb-0" id="cntTolerancia">1</h2>
+                        <h2 class="display-6 fw-bold text-info mb-0" id="cntTolerancia">0</h2>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="p-3 bg-warning bg-opacity-10 border border-warning rounded text-center">
                         <small class="text-dark text-uppercase fw-bold">Pendientes / Sin Escanear</small>
-                        <h2 class="display-6 fw-bold text-dark mb-0" id="cntPendientes">2</h2>
+                        <h2 class="display-6 fw-bold text-dark mb-0" id="cntPendientes">0</h2>
                     </div>
                 </div>
             </div>
@@ -163,7 +165,7 @@
                         <tr>
                             <td colspan="6" class="text-center text-muted py-4">
                                 <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                                Cargando lista de asistencia en tiempo real...
+                                Cargando lista de asistencia del grupo...
                             </td>
                         </tr>
                     </tbody>
@@ -177,8 +179,18 @@
     let audioCtxDocente = null;
     let osciladorDocente = null;
     let esEmitiendoTono = false;
+    let grupoSeleccionado = "@primerGrupo";
 
-    function toggleUltrasonido(botonElemento, idSesion) {
+    function toggleUltrasonido(botonElemento, idSesion, grupo) {
+        if (grupo) {
+            grupoSeleccionado = grupo;
+            const hiddenInput = document.getElementById('hiddenGrupoFinalizar');
+            const spanMonitor = document.getElementById('spanNombreGrupoMonitor');
+            if (hiddenInput) hiddenInput.value = grupo;
+            if (spanMonitor) spanMonitor.innerText = grupo;
+            cargarAsistenciaEnVivo();
+        }
+
         if (!esEmitiendoTono) {
             try {
                 audioCtxDocente = new (window.AudioContext || window.webkitAudioContext)();
@@ -219,7 +231,7 @@
 
     async function cargarAsistenciaEnVivo() {
         try {
-            const resp = await fetch('/api/Asistencia/ObtenerPaseListaGrupo?grupo=9IDGS-G2');
+            const resp = await fetch('/api/Asistencia/ObtenerPaseListaGrupo?grupo=' + encodeURIComponent(grupoSeleccionado));
             if (!resp.ok) return;
 
             const alumnos = await resp.json();
@@ -231,56 +243,60 @@
             let cntPend = 0;
 
             let html = '';
-            alumnos.forEach(a => {
-                let badgeClass = 'bg-secondary';
-                let badgeText = 'PENDIENTE';
-                let icon = 'bi-hourglass-split';
+            if (alumnos.length === 0) {
+                html = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-info-circle me-1"></i> No hay alumnos registrados para este grupo.</td></tr>';
+            } else {
+                alumnos.forEach(a => {
+                    let badgeClass = 'bg-secondary';
+                    let badgeText = 'PENDIENTE';
+                    let icon = 'bi-hourglass-split';
 
-                if (a.estado === 'PRESENTE') {
-                    badgeClass = 'bg-success text-white';
-                    badgeText = 'PRESENTE';
-                    icon = 'bi-check-circle-fill';
-                    cntPres++;
-                } else if (a.estado === 'TOLERANCIA_ACTIVA') {
-                    badgeClass = 'bg-info text-dark';
-                    badgeText = 'TOLERANCIA ACTIVA (+30m)';
-                    icon = 'bi-clock-history';
-                    cntTol++;
-                } else if (a.estado === 'RETARDO') {
-                    badgeClass = 'bg-warning text-dark';
-                    badgeText = 'RETARDO';
-                    icon = 'bi-exclamation-triangle-fill';
-                    cntPres++;
-                } else {
-                    cntPend++;
-                }
+                    if (a.estado === 'PRESENTE') {
+                        badgeClass = 'bg-success text-white';
+                        badgeText = 'PRESENTE';
+                        icon = 'bi-check-circle-fill';
+                        cntPres++;
+                    } else if (a.estado === 'TOLERANCIA_ACTIVA') {
+                        badgeClass = 'bg-info text-dark';
+                        badgeText = 'TOLERANCIA ACTIVA (+30m)';
+                        icon = 'bi-clock-history';
+                        cntTol++;
+                    } else if (a.estado === 'RETARDO') {
+                        badgeClass = 'bg-warning text-dark';
+                        badgeText = 'RETARDO';
+                        icon = 'bi-exclamation-triangle-fill';
+                        cntPres++;
+                    } else {
+                        cntPend++;
+                    }
 
-                html += `
-                    <tr>
-                        <td class="ps-3 fw-bold text-muted">${a.matricula}</td>
-                        <td class="fw-bold text-dark">${a.nombreCompleto}</td>
-                        <td>
-                            <span class="badge ${badgeClass} fs-6 px-3 py-2">
-                                <i class="bi ${icon} me-1"></i> ${badgeText}
-                            </span>
-                        </td>
-                        <td class="fw-semibold text-dark">${a.horaMarcado ? a.horaMarcado : '<span class="text-muted small">Sin marcar</span>'}</td>
-                        <td>
-                            <span class="badge bg-light text-dark border">
-                                <i class="bi bi-reception-4 text-success me-1"></i> ${a.metodo}
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-success me-1 fw-bold" onclick="marcarManual('${a.matricula}', 'PRESENTE')">
-                                <i class="bi bi-check-lg"></i> Presente
-                            </button>
-                            <button class="btn btn-sm btn-outline-warning fw-bold" onclick="marcarManual('${a.matricula}', 'RETARDO')">
-                                <i class="bi bi-clock"></i> Retardo
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
+                    html += `
+                        <tr>
+                            <td class="ps-3 fw-bold text-muted">${a.matricula}</td>
+                            <td class="fw-bold text-dark">${a.nombreCompleto}</td>
+                            <td>
+                                <span class="badge ${badgeClass} fs-6 px-3 py-2">
+                                    <i class="bi ${icon} me-1"></i> ${badgeText}
+                                </span>
+                            </td>
+                            <td class="fw-semibold text-dark">${a.horaMarcado ? a.horaMarcado : '<span class="text-muted small">Sin marcar</span>'}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-reception-4 text-success me-1"></i> ${a.metodo}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-success me-1 fw-bold" onclick="marcarManual('${a.matricula}', 'PRESENTE')">
+                                    <i class="bi bi-check-lg"></i> Presente
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning fw-bold" onclick="marcarManual('${a.matricula}', 'RETARDO')">
+                                    <i class="bi bi-clock"></i> Retardo
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
 
             tbody.innerHTML = html;
             document.getElementById('cntPresentes').innerText = cntPres;

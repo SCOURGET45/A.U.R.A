@@ -177,11 +177,55 @@ namespace Aura.Controllers
                 return RedirectToAction(nameof(Dashboard));
             }
 
-            int nuevoId = _asignacionesClases.Any() ? _asignacionesClases.Max(a => a.IdAsignacion) + 1 : 1;
-            model.IdAsignacion = nuevoId;
-            _asignacionesClases.Add(model);
+            var existente = _asignacionesClases.FirstOrDefault(a =>
+                a.NombreDocente.Equals(model.NombreDocente, StringComparison.OrdinalIgnoreCase) &&
+                a.NombreMateria.Equals(model.NombreMateria, StringComparison.OrdinalIgnoreCase) &&
+                a.NombreGrupo.Equals(model.NombreGrupo, StringComparison.OrdinalIgnoreCase));
+
+            if (existente != null)
+            {
+                existente.Horario = model.Horario;
+            }
+            else
+            {
+                int nuevoId = _asignacionesClases.Any() ? _asignacionesClases.Max(a => a.IdAsignacion) + 1 : 1;
+                model.IdAsignacion = nuevoId;
+                _asignacionesClases.Add(model);
+            }
 
             TempData["Exito"] = $"Clase '{model.NombreMateria}' ({model.NombreGrupo}) asignada exitosamente al docente {model.NombreDocente}.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        // Quitar / Desasignar Clase o Materia a Docente (POST)
+        [HttpPost("EliminarAsignacionClase")]
+        public IActionResult EliminarAsignacionClase(int idAsignacion)
+        {
+            var item = _asignacionesClases.FirstOrDefault(a => a.IdAsignacion == idAsignacion);
+            if (item != null)
+            {
+                _asignacionesClases.Remove(item);
+                TempData["Exito"] = $"La materia '{item.NombreMateria}' ({item.NombreGrupo}) fue removida correctamente del docente {item.NombreDocente}.";
+            }
+            else
+            {
+                TempData["Error"] = "No se encontró la asignación especificada.";
+            }
+
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        // Quitar Tutoría de Grupo Entero (POST)
+        [HttpPost("EliminarAsignacionTutor")]
+        public IActionResult EliminarAsignacionTutor(int idAsignacion)
+        {
+            var item = _asignacionesTutores.FirstOrDefault(a => a.IdAsignacion == idAsignacion);
+            if (item != null)
+            {
+                _asignacionesTutores.Remove(item);
+                TempData["Exito"] = $"La tutoría del grupo '{item.NombreGrupo}' asignada a {item.NombreTutor} fue removida correctamente.";
+            }
+
             return RedirectToAction(nameof(Dashboard));
         }
 
