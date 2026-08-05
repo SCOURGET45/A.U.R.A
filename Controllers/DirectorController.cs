@@ -26,12 +26,13 @@ namespace Aura.Controllers
         {
             var solicitudes = new List<SolicitudVulnerabilidadViewModel>();
 
+            // 1. Cargar desde la base de datos SQL en Render
             try
             {
                 var dbList = await _context.SolicitudesVulnerabilidad
                     .Include(s => s.Estudiante)
                     .ThenInclude(e => e.Grupo)
-                    .Where(s => s.Estado == "Pendiente" || s.Estado == "Agendado")
+                    .OrderByDescending(s => s.FechaCreacion)
                     .ToListAsync();
 
                 foreach (var s in dbList)
@@ -41,11 +42,11 @@ namespace Aura.Controllers
                         IdSolicitud = s.IdSolicitud,
                         IdEstudiante = s.IdEstudiante,
                         Matricula = s.Estudiante != null ? s.Estudiante.Matricula : "23301133",
-                        NombreAlumno = s.Estudiante != null ? $"{s.Estudiante.Nombre} {s.Estudiante.Apellidos}" : "Alan Santiago Molina",
+                        NombreAlumno = s.Estudiante != null ? $"{s.Estudiante.Nombre} {s.Estudiante.Apellidos}" : "Alumno Registrado",
                         Grupo = (s.Estudiante != null && s.Estudiante.Grupo != null) ? s.Estudiante.Grupo.NombreGrupo : "9IDGS-G2",
                         CategoriaMotivo = s.CategoriaMotivo ?? s.Motivo ?? "Transporte / Lejanía",
-                        JustificacionTutor = s.JustificacionTutor ?? s.Descripcion ?? "El alumno vive a más de 40 km y utiliza 2 transportes públicos.",
-                        FechaPeticion = s.FechaCreacion != default ? s.FechaCreacion : DateTime.Now.AddDays(-2),
+                        JustificacionTutor = s.JustificacionTutor ?? s.Descripcion ?? "Solicitud registrada en sistema.",
+                        FechaPeticion = s.FechaCreacion != default ? s.FechaCreacion : DateTime.Now,
                         FechaJuntaComision = s.FechaJuntaComision,
                         Estado = s.Estado ?? "Pendiente"
                     });
@@ -56,12 +57,13 @@ namespace Aura.Controllers
                 Console.WriteLine("Advertencia DB BandejaVulnerabilidades: " + ex.Message);
             }
 
-            // Incluir solicitudes desde memoria estática del Tutor
+            // 2. Incluir solicitudes creadas por el Tutor desde memoria
             try
             {
                 foreach (var vMem in TutorController._vulnerabilidadesMemoria)
                 {
-                    if (!solicitudes.Any(s => s.IdSolicitud == vMem.IdSolicitud))
+                    var existente = solicitudes.FirstOrDefault(s => s.IdSolicitud == vMem.IdSolicitud);
+                    if (existente == null)
                     {
                         var alumnoMem = SecretariaController._alumnosMemoria.FirstOrDefault(a => a.IdEstudiante == vMem.IdEstudiante);
                         solicitudes.Add(new SolicitudVulnerabilidadViewModel
@@ -69,7 +71,7 @@ namespace Aura.Controllers
                             IdSolicitud = vMem.IdSolicitud,
                             IdEstudiante = vMem.IdEstudiante,
                             Matricula = alumnoMem?.Matricula ?? "23301133",
-                            NombreAlumno = alumnoMem != null ? $"{alumnoMem.Nombre} {alumnoMem.Apellidos}" : "Alan Santiago Molina",
+                            NombreAlumno = alumnoMem != null ? $"{alumnoMem.Nombre} {alumnoMem.Apellidos}" : "Alumno UTTT",
                             Grupo = alumnoMem?.NombreGrupo ?? "9IDGS-G2",
                             CategoriaMotivo = vMem.CategoriaMotivo ?? "Transporte / Lejanía",
                             JustificacionTutor = vMem.JustificacionTutor ?? "Solicitud enviada por Tutoría",
@@ -79,46 +81,17 @@ namespace Aura.Controllers
                             Estado = vMem.Estado ?? "Pendiente"
                         });
                     }
+                    else
+                    {
+                        // Sincronizar estado si ya existía
+                        existente.Estado = vMem.Estado ?? existente.Estado;
+                        existente.FechaJuntaComision = vMem.FechaJuntaComision ?? existente.FechaJuntaComision;
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Advertencia Memoria BandejaVulnerabilidades: " + ex.Message);
-            }
-
-            if (!solicitudes.Any())
-            {
-                solicitudes = new List<SolicitudVulnerabilidadViewModel>
-                {
-                    new SolicitudVulnerabilidadViewModel
-                    {
-                        IdSolicitud = 1,
-                        IdEstudiante = 1,
-                        Matricula = "23301133",
-                        NombreAlumno = "Alan Santiago Molina",
-                        Grupo = "9IDGS-G2",
-                        CategoriaMotivo = "Lejanía / Transporte Extremo",
-                        JustificacionTutor = "El alumno radica en zona rural (Zimapán) con traslados de 2.5 horas diarias. Se requiere margen de tolerancia.",
-                        NombreTutor = "Odisey Yasmin Porras",
-                        FechaPeticion = DateTime.Now.AddDays(-1),
-                        FechaJuntaComision = null,
-                        Estado = "Pendiente"
-                    },
-                    new SolicitudVulnerabilidadViewModel
-                    {
-                        IdSolicitud = 2,
-                        IdEstudiante = 2,
-                        Matricula = "23301145",
-                        NombreAlumno = "María Fernanda Gómez",
-                        Grupo = "9IDGS-G1",
-                        CategoriaMotivo = "Horario Laboral Formal",
-                        JustificacionTutor = "Presenta carta de la empresa comprobando turno vespertino que concluye a las 06:30 hrs.",
-                        NombreTutor = "Odisey Yasmin Porras",
-                        FechaPeticion = DateTime.Now.AddDays(-3),
-                        FechaJuntaComision = DateTime.Now.AddDays(1).AddHours(4),
-                        Estado = "Agendado"
-                    }
-                };
             }
 
             return View(solicitudes);
@@ -191,6 +164,7 @@ namespace Aura.Controllers
             }
             catch { }
 
+            // Actualizar memoria estática de Tutoría
             var vMem = TutorController._vulnerabilidadesMemoria.FirstOrDefault(v => v.IdSolicitud == idSolicitud);
             if (vMem != null)
             {
@@ -200,7 +174,7 @@ namespace Aura.Controllers
                 vMem.MinutosToleranciaOtorgados = decision == "Aprobado" ? (minutosTolerancia > 0 ? minutosTolerancia : 30) : 0;
             }
 
-            TempData["Mensaje"] = $"La solicitud fue dictaminada como '{decision}'. Tolerancia de {minutosTolerancia} min sincronizada en el sistema.";
+            TempData["Mensaje"] = $"La solicitud #{idSolicitud} fue dictaminada exitosamente como '{decision}' con {minutosTolerancia} minutos de tolerancia otorgados.";
             return RedirectToAction(nameof(BandejaVulnerabilidades));
         }
 

@@ -1,3 +1,4 @@
+@using System.Text.Encodings.Web
 @model IEnumerable<Aura.Models.SolicitudVulnerabilidadViewModel>
 
 @{
@@ -10,13 +11,13 @@
             <h2 class="fw-bold text-dark mb-1">
                 <i class="bi bi-inbox-fill text-primary me-2"></i>Bandeja de Dictamen de Vulnerabilidades
             </h2>
-            <p class="text-muted mb-0">Revisa solicitudes de tutores, agenda reuniones con la Comisión Académica y dictamina tolerancias.</p>
+            <p class="text-muted mb-0">Revisa solicitudes reales de tutores, lee los detalles completos y dictamina tolerancias oficiales.</p>
         </div>
         <div class="d-flex gap-2">
             <a asp-action="MonitorGeneral" class="btn btn-outline-primary fw-bold">
                 <i class="bi bi-graph-up-arrow me-1"></i> Monitor Divisional
             </a>
-            <span class="badge bg-secondary fs-6 px-3 py-2">@Model.Count() Solicitudes</span>
+            <span class="badge bg-primary fs-6 px-3 py-2">@Model.Count() Solicitudes Totales</span>
         </div>
     </div>
 
@@ -40,8 +41,8 @@
     {
         <div class="card border-0 shadow-sm p-5 text-center my-4">
             <i class="bi bi-shield-check display-1 text-success mb-3"></i>
-            <h4 class="fw-bold text-dark">Bandeja al día</h4>
-            <p class="text-muted">No existen solicitudes de vulnerabilidad pendientes de agendamiento o dictamen.</p>
+            <h4 class="fw-bold text-dark">Sin solicitudes registradas</h4>
+            <p class="text-muted mb-0">Actualmente no hay solicitudes de vulnerabilidad emitidas por los tutores.</p>
         </div>
     }
     else
@@ -52,7 +53,7 @@
                 <div class="card-body py-2 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
                         <input type="checkbox" id="checkAll" class="form-check-input ms-2" onclick="toggleSelectAll(this)" />
-                        <label for="checkAll" class="form-check-label fw-bold text-dark small mb-0">Seleccionar todos los casos</label>
+                        <label for="checkAll" class="form-check-label fw-bold text-dark small mb-0">Seleccionar casos pendientes</label>
                     </div>
 
                     <button type="button" class="btn btn-warning btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAgendarJunta">
@@ -61,7 +62,7 @@
                 </div>
             </div>
 
-            <!-- Tabla de Casos -->
+            <!-- Tabla de Casos Reales -->
             <div class="table-responsive shadow-sm rounded border bg-white mb-4">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-dark text-white">
@@ -70,17 +71,25 @@
                             <th>Fecha</th>
                             <th>Alumno / Grupo</th>
                             <th>Categoría Motivo</th>
-                            <th>Justificación del Tutor</th>
+                            <th>Detalle / Lectura</th>
                             <th>Estatus / Agendamiento</th>
-                            <th class="text-center">Dictamen</th>
+                            <th class="text-center" style="width: 220px;">Dictamen / Acción</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var peticion in Model)
                         {
-                            <tr>
+                            bool estaDictaminado = peticion.Estado == "Aprobado" || peticion.Estado == "Rechazado";
+                            <tr class="@(peticion.Estado == "Aprobado" ? "table-success bg-opacity-10" : (peticion.Estado == "Rechazado" ? "table-danger bg-opacity-10" : ""))">
                                 <td class="text-center">
-                                    <input type="checkbox" name="idsSolicitudes" value="@peticion.IdSolicitud" class="form-check-input case-checkbox" />
+                                    @if (!estaDictaminado)
+                                    {
+                                        <input type="checkbox" name="idsSolicitudes" value="@peticion.IdSolicitud" class="form-check-input case-checkbox" />
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check2-circle text-muted"></i>
+                                    }
                                 </td>
                                 <td class="text-muted small">@peticion.FechaPeticion.ToString("dd/MM/yyyy HH:mm")</td>
                                 <td>
@@ -88,41 +97,60 @@
                                     <div class="small text-muted">@peticion.Matricula | <span class="badge bg-light text-dark border">@peticion.Grupo</span></div>
                                 </td>
                                 <td><span class="badge bg-info text-dark">@peticion.CategoriaMotivo</span></td>
-                                <td style="max-width: 280px;">
-                                    <p class="mb-0 small text-truncate" title="@peticion.JustificacionTutor">
-                                        @peticion.JustificacionTutor
-                                    </p>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="abrirModalLectura('@peticion.NombreAlumno', '@peticion.Matricula', '@peticion.Grupo', '@peticion.CategoriaMotivo', '@JavaScriptEncoder.Default.Encode(peticion.JustificacionTutor)')">
+                                        <i class="bi bi-book-half me-1"></i> Leer Solicitud
+                                    </button>
                                 </td>
                                 <td>
-                                    @if (peticion.FechaJuntaComision.HasValue)
+                                    @if (peticion.Estado == "Aprobado")
+                                    {
+                                        <span class="badge bg-success fs-6">
+                                            <i class="bi bi-check-circle-fill me-1"></i> APROBADO (Tolerancia Activa)
+                                        </span>
+                                    }
+                                    else if (peticion.Estado == "Rechazado")
+                                    {
+                                        <span class="badge bg-danger fs-6">
+                                            <i class="bi bi-x-circle-fill me-1"></i> RECHAZADO
+                                        </span>
+                                    }
+                                    else if (peticion.FechaJuntaComision.HasValue)
                                     {
                                         <span class="badge bg-primary">
-                                            <i class="bi bi-calendar-check me-1"></i> @peticion.FechaJuntaComision.Value.ToString("dd/MM/yyyy HH:mm")
+                                            <i class="bi bi-calendar-check me-1"></i> Junta: @peticion.FechaJuntaComision.Value.ToString("dd/MM/yyyy HH:mm")
                                         </span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary">
-                                            <i class="bi bi-hourglass me-1"></i> Pendiente Agendar
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-hourglass-split me-1"></i> Pendiente Agendar
                                         </span>
                                     }
                                 </td>
                                 <td class="text-center">
-                                    <div class="d-flex justify-content-center gap-1">
-                                        <!-- Form Aprobación con Tolerancia -->
-                                        <button type="button" class="btn btn-sm btn-success fw-bold" onclick="abrirModalDictamen(@peticion.IdSolicitud, '@peticion.NombreAlumno')">
-                                            <i class="bi bi-check-lg"></i> Aprobar
-                                        </button>
-
-                                        <!-- Form Rechazo -->
-                                        <form asp-controller="Director" asp-action="Dictaminar" method="post" class="d-inline">
-                                            <input type="hidden" name="idSolicitud" value="@peticion.IdSolicitud" />
-                                            <input type="hidden" name="decision" value="Rechazado" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Rechazar solicitud">
-                                                <i class="bi bi-x-lg"></i>
+                                    @if (!estaDictaminado)
+                                    {
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="abrirModalDictamen(@peticion.IdSolicitud, '@peticion.NombreAlumno')">
+                                                <i class="bi bi-check-lg me-1"></i> Aprobar
                                             </button>
-                                        </form>
-                                    </div>
+
+                                            <form asp-controller="Director" asp-action="Dictaminar" method="post" class="d-inline">
+                                                <input type="hidden" name="idSolicitud" value="@peticion.IdSolicitud" />
+                                                <input type="hidden" name="decision" value="Rechazado" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Rechazar solicitud">
+                                                    <i class="bi bi-x-lg"></i> Rechazar
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-dark border py-2 px-3 fw-bold">
+                                            <i class="bi bi-lock-fill me-1"></i> Dictaminado
+                                        </span>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -158,6 +186,49 @@
                 </div>
             </div>
         </form>
+
+        <!-- Modal de Lectura Completa de la Solicitud -->
+        <div class="modal fade" id="modalLecturaSolicitud" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold"><i class="bi bi-journal-text me-2"></i>Detalle Completo de la Solicitud</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="text-muted small text-uppercase fw-bold">Alumno</label>
+                                <h5 id="readNombreAlumno" class="fw-bold text-dark mb-0"></h5>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="text-muted small text-uppercase fw-bold">Matrícula</label>
+                                <div id="readMatricula" class="fw-semibold"></div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="text-muted small text-uppercase fw-bold">Grupo</label>
+                                <div id="readGrupo" class="fw-semibold"></div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="mb-3">
+                            <label class="text-muted small text-uppercase fw-bold">Categoría del Motivo</label>
+                            <div><span id="readCategoria" class="badge bg-info text-dark fs-6"></span></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-muted small text-uppercase fw-bold">Explicación y Justificación Completa del Tutor</label>
+                            <div id="readJustificacion" class="p-3 bg-light rounded border text-dark fs-6" style="white-space: pre-wrap;"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Cerrar Lectura</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Modal Dictamen Aprobatorio (Tolerancia Dinámica) -->
         <div class="modal fade" id="modalDictamen" tabindex="-1" aria-hidden="true">
@@ -206,6 +277,16 @@
         for (var i = 0, n = checkboxes.length; i < n; i++) {
             checkboxes[i].checked = source.checked;
         }
+    }
+
+    function abrirModalLectura(nombre, matricula, grupo, categoria, justificacion) {
+        document.getElementById('readNombreAlumno').innerText = nombre;
+        document.getElementById('readMatricula').innerText = matricula;
+        document.getElementById('readGrupo').innerText = grupo;
+        document.getElementById('readCategoria').innerText = categoria;
+        document.getElementById('readJustificacion').innerText = decodeURIComponent(justificacion);
+        var modal = new bootstrap.Modal(document.getElementById('modalLecturaSolicitud'));
+        modal.show();
     }
 
     function abrirModalDictamen(idSolicitud, nombreAlumno) {
