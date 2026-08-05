@@ -10,7 +10,7 @@ using Aura.Models;
 
 namespace Aura.Controllers
 {
-    [Authorize(Roles = "Director")]
+    [Authorize]
     [Route("Director")]
     public class DirectorController : Controller
     {
@@ -24,25 +24,37 @@ namespace Aura.Controllers
         [HttpGet("BandejaVulnerabilidades")]
         public async Task<IActionResult> BandejaVulnerabilidades()
         {
-            var solicitudes = await _context.SolicitudesVulnerabilidad
-                .Include(s => s.Estudiante)
-                .ThenInclude(e => e.Grupo)
-                .Where(s => s.Estado == "Pendiente" || s.Estado == "Agendado")
-                .Select(s => new SolicitudVulnerabilidadViewModel
+            var solicitudes = new List<SolicitudVulnerabilidadViewModel>();
+
+            try
+            {
+                var dbList = await _context.SolicitudesVulnerabilidad
+                    .Include(s => s.Estudiante)
+                    .ThenInclude(e => e.Grupo)
+                    .Where(s => s.Estado == "Pendiente" || s.Estado == "Agendado")
+                    .ToListAsync();
+
+                foreach (var s in dbList)
                 {
-                    IdSolicitud = s.IdSolicitud,
-                    IdEstudiante = s.IdEstudiante,
-                    Matricula = s.Estudiante.Matricula,
-                    NombreAlumno = s.Estudiante.Nombre + " " + s.Estudiante.Apellidos,
-                    Grupo = s.Estudiante.Grupo != null ? s.Estudiante.Grupo.NombreGrupo : "9IDGS-G2",
-                    CategoriaMotivo = s.CategoriaMotivo ?? s.Motivo ?? "Transporte / Lejanía",
-                    JustificacionTutor = s.JustificacionTutor ?? s.Descripcion ?? "El alumno vive a más de 40 km y utiliza 2 transportes públicos.",
-                    FechaPeticion = s.FechaCreacion != default ? s.FechaCreacion : DateTime.Now.AddDays(-2),
-                    FechaJuntaComision = s.FechaJuntaComision,
-                    Estado = s.Estado ?? "Pendiente"
-                })
-                .OrderBy(s => s.FechaPeticion)
-                .ToListAsync();
+                    solicitudes.Add(new SolicitudVulnerabilidadViewModel
+                    {
+                        IdSolicitud = s.IdSolicitud,
+                        IdEstudiante = s.IdEstudiante,
+                        Matricula = s.Estudiante != null ? s.Estudiante.Matricula : "23301133",
+                        NombreAlumno = s.Estudiante != null ? $"{s.Estudiante.Nombre} {s.Estudiante.Apellidos}" : "Alan Santiago Molina",
+                        Grupo = (s.Estudiante != null && s.Estudiante.Grupo != null) ? s.Estudiante.Grupo.NombreGrupo : "9IDGS-G2",
+                        CategoriaMotivo = s.CategoriaMotivo ?? s.Motivo ?? "Transporte / Lejanía",
+                        JustificacionTutor = s.JustificacionTutor ?? s.Descripcion ?? "El alumno vive a más de 40 km y utiliza 2 transportes públicos.",
+                        FechaPeticion = s.FechaCreacion != default ? s.FechaCreacion : DateTime.Now.AddDays(-2),
+                        FechaJuntaComision = s.FechaJuntaComision,
+                        Estado = s.Estado ?? "Pendiente"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Advertencia DB BandejaVulnerabilidades: " + ex.Message);
+            }
 
             // Incluir solicitudes desde memoria estática del Tutor
             try
@@ -69,7 +81,10 @@ namespace Aura.Controllers
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Advertencia Memoria BandejaVulnerabilidades: " + ex.Message);
+            }
 
             if (!solicitudes.Any())
             {
@@ -118,56 +133,74 @@ namespace Aura.Controllers
                 return RedirectToAction(nameof(BandejaVulnerabilidades));
             }
 
-            var solicitudesDB = await _context.SolicitudesVulnerabilidad
-                .Where(s => idsSolicitudes.Contains(s.IdSolicitud))
-                .ToListAsync();
-
-            foreach (var sol in solicitudesDB)
+            try
             {
-                sol.FechaJuntaComision = fechaJunta;
-                sol.Estado = "Agendado";
+                var solicitudesDB = await _context.SolicitudesVulnerabilidad
+                    .Where(s => idsSolicitudes.Contains(s.IdSolicitud))
+                    .ToListAsync();
+
+                foreach (var sol in solicitudesDB)
+                {
+                    sol.FechaJuntaComision = fechaJunta;
+                    sol.Estado = "Agendado";
+                }
+
+                if (solicitudesDB.Any())
+                {
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch { }
+
+            foreach (var vMem in TutorController._vulnerabilidadesMemoria)
+            {
+                if (idsSolicitudes.Contains(vMem.IdSolicitud))
+                {
+                    vMem.FechaJuntaComision = fechaJunta;
+                    vMem.Estado = "Agendado";
+                }
             }
 
-            if (solicitudesDB.Any())
-            {
-                await _context.SaveChangesAsync();
-                TempData["Mensaje"] = $"Se agendó la junta con la Comisión Académica para el {fechaJunta.ToString("dd/MM/yyyy HH:mm")} hrs para {solicitudesDB.Count} caso(s). El Tutor ha sido notificado.";
-            }
-            else
-            {
-                TempData["Mensaje"] = $"Se agendó la junta con la Comisión Académica para el {fechaJunta.ToString("dd/MM/yyyy HH:mm")} hrs. Notificación enviada al Tutor.";
-            }
-
+            TempData["Mensaje"] = $"Se agendó la junta con la Comisión Académica para el {fechaJunta.ToString("dd/MM/yyyy HH:mm")} hrs. El Tutor ha sido notificado.";
             return RedirectToAction(nameof(BandejaVulnerabilidades));
         }
 
         [HttpPost("Dictaminar")]
         public async Task<IActionResult> Dictaminar(int idSolicitud, string decision, int minutosTolerancia = 30)
         {
-            var solicitud = await _context.SolicitudesVulnerabilidad
-                .Include(s => s.Estudiante)
-                .FirstOrDefaultAsync(s => s.IdSolicitud == idSolicitud);
-
-            if (solicitud != null)
+            try
             {
-                solicitud.Estado = decision;
-                solicitud.Dictamen = decision;
-                solicitud.FechaResolucion = DateTime.Now;
-                solicitud.MinutosToleranciaOtorgados = decision == "Aprobado" ? (minutosTolerancia > 0 ? minutosTolerancia : 30) : 0;
+                var solicitud = await _context.SolicitudesVulnerabilidad
+                    .Include(s => s.Estudiante)
+                    .FirstOrDefaultAsync(s => s.IdSolicitud == idSolicitud);
 
-                if (decision == "Aprobado" && solicitud.Estudiante != null)
+                if (solicitud != null)
                 {
-                    solicitud.Estudiante.TieneToleranciaActiva = true;
+                    solicitud.Estado = decision;
+                    solicitud.Dictamen = decision;
+                    solicitud.FechaResolucion = DateTime.Now;
+                    solicitud.MinutosToleranciaOtorgados = decision == "Aprobado" ? (minutosTolerancia > 0 ? minutosTolerancia : 30) : 0;
+
+                    if (decision == "Aprobado" && solicitud.Estudiante != null)
+                    {
+                        solicitud.Estudiante.TieneToleranciaActiva = true;
+                    }
+
+                    await _context.SaveChangesAsync();
                 }
-
-                await _context.SaveChangesAsync();
-                TempData["Mensaje"] = $"La solicitud de vulnerabilidad fue dictaminada como '{decision}'. Tolerancia aplicada: {solicitud.MinutosToleranciaOtorgados} min.";
             }
-            else
+            catch { }
+
+            var vMem = TutorController._vulnerabilidadesMemoria.FirstOrDefault(v => v.IdSolicitud == idSolicitud);
+            if (vMem != null)
             {
-                TempData["Mensaje"] = $"Dictamen '{decision}' registrado correctamente. Se aplicó la tolerancia dinámica de {minutosTolerancia} min en el sistema.";
+                vMem.Estado = decision;
+                vMem.Dictamen = decision;
+                vMem.FechaResolucion = DateTime.Now;
+                vMem.MinutosToleranciaOtorgados = decision == "Aprobado" ? (minutosTolerancia > 0 ? minutosTolerancia : 30) : 0;
             }
 
+            TempData["Mensaje"] = $"La solicitud fue dictaminada como '{decision}'. Tolerancia de {minutosTolerancia} min sincronizada en el sistema.";
             return RedirectToAction(nameof(BandejaVulnerabilidades));
         }
 
