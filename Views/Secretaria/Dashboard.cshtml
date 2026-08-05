@@ -342,8 +342,17 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">Nombre del Docente <span class="text-danger">*</span></label>
-                        <input type="text" name="NombreDocente" class="form-control" placeholder="Ej. Odisey Yasmin Porras Beltrán" value="Odisey Yasmin Porras Beltrán" required />
+                        <label class="form-label fw-bold small text-muted">Docente Registrado <span class="text-danger">*</span></label>
+                        <select name="NombreDocente" class="form-select form-select-lg fw-bold" required>
+                            <option value="">-- Selecciona un Docente Registrado --</option>
+                            @if (ViewBag.DocentesRegistrados != null)
+                            {
+                                foreach (string doc in (List<string>)ViewBag.DocentesRegistrados)
+                                {
+                                    <option value="@doc">@doc</option>
+                                }
+                            }
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">Asignatura / Materia <span class="text-danger">*</span></label>
@@ -386,8 +395,17 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">Tutor Responsable <span class="text-danger">*</span></label>
-                        <input type="text" name="NombreTutor" class="form-control" placeholder="Ej. Odisey Yasmin Porras Beltrán" value="Odisey Yasmin Porras Beltrán" required />
+                        <label class="form-label fw-bold small text-muted">Tutor / Docente Registrado <span class="text-danger">*</span></label>
+                        <select name="NombreTutor" class="form-select form-select-lg fw-bold" required>
+                            <option value="">-- Selecciona un Tutor Registrado --</option>
+                            @if (ViewBag.DocentesRegistrados != null)
+                            {
+                                foreach (string doc in (List<string>)ViewBag.DocentesRegistrados)
+                                {
+                                    <option value="@doc">@doc</option>
+                                }
+                            }
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold small text-muted">Carrera / Programa Educativo</label>

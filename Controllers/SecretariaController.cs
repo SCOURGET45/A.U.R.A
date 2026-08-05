@@ -152,6 +152,46 @@ namespace Aura.Controllers
             var listaFinalAlumnos = _alumnosMemoria.ToList();
             int totalGruposContados = listaFinalAlumnos.Select(a => a.NombreGrupo).Distinct().Count();
 
+            // Cargar lista unificada de docentes y tutores registrados previamente
+            var listaDocentes = new List<string>
+            {
+                "Odisey Yasmin Porras Beltrán",
+                "Carlos Ramírez Cruz",
+                "María Elena Gutiérrez",
+                "Roberto Sánchez López"
+            };
+
+            try
+            {
+                foreach (var u in AuthController._usuariosDinamicos.Values)
+                {
+                    if ((u.Rol == "Docente" || u.Rol == "Tutor") && !string.IsNullOrEmpty(u.Nombre))
+                    {
+                        if (!listaDocentes.Any(d => d.Equals(u.Nombre, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            listaDocentes.Add(u.Nombre);
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            try
+            {
+                var docentesDb = _context.Usuarios.Where(u => u.Rol.ToString() == "Docente" || u.Rol.ToString() == "Tutor").ToList();
+                foreach (var u in docentesDb)
+                {
+                    string nom = u.NombreCompleto?.Trim() ?? string.Empty;
+                    if (!string.IsNullOrEmpty(nom) && !listaDocentes.Any(d => d.Equals(nom, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        listaDocentes.Add(nom);
+                    }
+                }
+            }
+            catch { }
+
+            ViewBag.DocentesRegistrados = listaDocentes.Distinct().OrderBy(d => d).ToList();
+
             var model = new SecretariaDashboardViewModel
             {
                 TotalAlumnosInscritos = listaFinalAlumnos.Count,
