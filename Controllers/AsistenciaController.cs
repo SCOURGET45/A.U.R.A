@@ -191,6 +191,7 @@ namespace Aura.Controllers
                 string rawMat = alumno.Matricula.Trim();
                 string cleanMat = rawMat.Split('@')[0].Trim();
                 string normNombre = NormalizarTexto(alumno.NombreCompleto);
+                string normMat = NormalizarTexto(rawMat);
 
                 string estadoVal = "PENDIENTE";
                 string horaVal = null;
@@ -209,6 +210,25 @@ namespace Aura.Controllers
                 else if (!string.IsNullOrEmpty(normNombre) && _paseListaEnVivo.ContainsKey(normNombre))
                 {
                     regEncontrado = _paseListaEnVivo[normNombre];
+                }
+                else if (_paseListaEnVivo.ContainsKey(alumno.IdEstudiante.ToString()))
+                {
+                    regEncontrado = _paseListaEnVivo[alumno.IdEstudiante.ToString()];
+                }
+                else
+                {
+                    // Búsqueda cruzada por coincidencia parcial en claves de sesión
+                    foreach (var kvp in _paseListaEnVivo)
+                    {
+                        string keyNorm = NormalizarTexto(kvp.Key);
+                        if (!string.IsNullOrEmpty(keyNorm) &&
+                            (!string.IsNullOrEmpty(normMat) && (keyNorm.Contains(normMat) || normMat.Contains(keyNorm))) ||
+                            (!string.IsNullOrEmpty(normNombre) && (keyNorm.Contains(normNombre) || normNombre.Contains(keyNorm))))
+                        {
+                            regEncontrado = kvp.Value;
+                            break;
+                        }
+                    }
                 }
 
                 if (regEncontrado.HasValue)
@@ -257,7 +277,7 @@ namespace Aura.Controllers
                 _paseListaEnVivo[normMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
             }
 
-            // Buscar si la matrícula pertenece a un alumno conocido para guardar también por su nombre normalizado
+            // Buscar si la matrícula o usuario pertenece a algún alumno en las listas oficiales o memoria
             try
             {
                 var docCtrl = new DocenteController(_context);
@@ -266,11 +286,16 @@ namespace Aura.Controllers
                 {
                     var alumnos = docCtrl.ObtenerAlumnosUnificados(g);
                     var encontrado = alumnos.FirstOrDefault(a =>
-                        a.Matricula.Equals(cleanMat, StringComparison.OrdinalIgnoreCase) ||
-                        a.Matricula.Equals(rawMat, StringComparison.OrdinalIgnoreCase) ||
-                        NormalizarTexto(a.Matricula) == normMat ||
-                        NormalizarTexto(a.NombreCompleto) == normMat
-                    );
+                    {
+                        string cM = a.Matricula.Split('@')[0].Trim();
+                        string nN = NormalizarTexto(a.NombreCompleto);
+                        string nM = NormalizarTexto(a.Matricula);
+
+                        return cM.Equals(cleanMat, StringComparison.OrdinalIgnoreCase) ||
+                               a.Matricula.Equals(rawMat, StringComparison.OrdinalIgnoreCase) ||
+                               (!string.IsNullOrEmpty(normMat) && (nM.Contains(normMat) || normMat.Contains(nM))) ||
+                               (!string.IsNullOrEmpty(normMat) && (nN.Contains(normMat) || normMat.Contains(nN)));
+                    });
 
                     if (encontrado != null)
                     {
@@ -279,8 +304,11 @@ namespace Aura.Controllers
                         {
                             _paseListaEnVivo[normNombreAlumno] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
                         }
+
                         string cleanMatAlumno = encontrado.Matricula.Split('@')[0].Trim();
                         _paseListaEnVivo[cleanMatAlumno] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+                        _paseListaEnVivo[encontrado.Matricula] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+                        _paseListaEnVivo[encontrado.IdEstudiante.ToString()] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
                         break;
                     }
                 }

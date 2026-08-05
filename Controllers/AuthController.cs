@@ -65,7 +65,26 @@ namespace Aura.Controllers
                 {
                     loginValido = true;
                     idUsuarioUsar = usuario.IdUsuario;
-                    rolNombre = usuario.Rol?.NombreRol ?? "Docente";
+
+                    string? nombreRolDb = usuario.Rol?.NombreRol;
+                    if (string.IsNullOrEmpty(nombreRolDb))
+                    {
+                        var rObj = await _context.Roles.FirstOrDefaultAsync(r => r.IdRol == usuario.IdRol);
+                        nombreRolDb = rObj?.NombreRol;
+                    }
+
+                    if (!string.IsNullOrEmpty(nombreRolDb))
+                    {
+                        rolNombre = nombreRolDb;
+                    }
+                    else
+                    {
+                        if (correoLower.Contains("director") || correoLower.Contains("dir")) rolNombre = "Director";
+                        else if (correoLower.Contains("secretaria") || correoLower.Contains("sec")) rolNombre = "Secretaria";
+                        else if (correoLower.Contains("tutor")) rolNombre = "Tutor";
+                        else if (correoLower.Contains("docente")) rolNombre = "Docente";
+                        else rolNombre = "Estudiante";
+                    }
                 }
             }
             catch (Exception ex)

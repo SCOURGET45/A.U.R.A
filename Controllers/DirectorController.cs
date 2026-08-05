@@ -44,6 +44,33 @@ namespace Aura.Controllers
                 .OrderBy(s => s.FechaPeticion)
                 .ToListAsync();
 
+            // Incluir solicitudes desde memoria estática del Tutor
+            try
+            {
+                foreach (var vMem in TutorController._vulnerabilidadesMemoria)
+                {
+                    if (!solicitudes.Any(s => s.IdSolicitud == vMem.IdSolicitud))
+                    {
+                        var alumnoMem = SecretariaController._alumnosMemoria.FirstOrDefault(a => a.IdEstudiante == vMem.IdEstudiante);
+                        solicitudes.Add(new SolicitudVulnerabilidadViewModel
+                        {
+                            IdSolicitud = vMem.IdSolicitud,
+                            IdEstudiante = vMem.IdEstudiante,
+                            Matricula = alumnoMem?.Matricula ?? "23301133",
+                            NombreAlumno = alumnoMem != null ? $"{alumnoMem.Nombre} {alumnoMem.Apellidos}" : "Alan Santiago Molina",
+                            Grupo = alumnoMem?.NombreGrupo ?? "9IDGS-G2",
+                            CategoriaMotivo = vMem.CategoriaMotivo ?? "Transporte / Lejanía",
+                            JustificacionTutor = vMem.JustificacionTutor ?? "Solicitud enviada por Tutoría",
+                            NombreTutor = "Odisey Yasmin Porras",
+                            FechaPeticion = vMem.FechaCreacion,
+                            FechaJuntaComision = vMem.FechaJuntaComision,
+                            Estado = vMem.Estado ?? "Pendiente"
+                        });
+                    }
+                }
+            }
+            catch { }
+
             if (!solicitudes.Any())
             {
                 solicitudes = new List<SolicitudVulnerabilidadViewModel>
