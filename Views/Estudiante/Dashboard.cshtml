@@ -412,4 +412,13 @@
             audioCtx = null;
         }
     }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const modalElement = document.getElementById('modalAsistenciaUltrasonica');
+        if (modalElement) {
+            modalElement.addEventListener('shown.bs.modal', () => {
+                iniciarEscaneoUltrasonico();
+            });
+        }
+    });
 </script>

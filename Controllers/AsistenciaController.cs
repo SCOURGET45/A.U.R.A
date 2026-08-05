@@ -190,17 +190,32 @@ namespace Aura.Controllers
             {
                 string rawMat = alumno.Matricula.Trim();
                 string cleanMat = rawMat.Split('@')[0].Trim();
+                string normNombre = NormalizarTexto(alumno.NombreCompleto);
 
                 string estadoVal = "PENDIENTE";
                 string horaVal = null;
                 string metodoVal = "-";
 
-                if (_paseListaEnVivo.ContainsKey(rawMat) || _paseListaEnVivo.ContainsKey(cleanMat))
+                (string Estado, DateTime Hora, string Metodo)? regEncontrado = null;
+
+                if (_paseListaEnVivo.ContainsKey(cleanMat))
                 {
-                    var reg = _paseListaEnVivo.ContainsKey(rawMat) ? _paseListaEnVivo[rawMat] : _paseListaEnVivo[cleanMat];
-                    estadoVal = reg.Estado;
-                    horaVal = reg.Hora.ToString("hh:mm:ss tt");
-                    metodoVal = reg.Metodo;
+                    regEncontrado = _paseListaEnVivo[cleanMat];
+                }
+                else if (_paseListaEnVivo.ContainsKey(rawMat))
+                {
+                    regEncontrado = _paseListaEnVivo[rawMat];
+                }
+                else if (!string.IsNullOrEmpty(normNombre) && _paseListaEnVivo.ContainsKey(normNombre))
+                {
+                    regEncontrado = _paseListaEnVivo[normNombre];
+                }
+
+                if (regEncontrado.HasValue)
+                {
+                    estadoVal = regEncontrado.Value.Estado;
+                    horaVal = regEncontrado.Value.Hora.ToString("hh:mm:ss tt");
+                    metodoVal = regEncontrado.Value.Metodo;
                 }
 
                 estudiantesResult.Add(new
@@ -223,18 +238,54 @@ namespace Aura.Controllers
         [HttpPost("RegistrarPorMatricula")]
         public IActionResult RegistrarPorMatricula([FromBody] RegistrarMatriculaDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.Matricula))
+            if (string.IsNullOrWhiteSpace(dto?.Matricula))
             {
                 return BadRequest(new { Mensaje = "La matrícula es requerida." });
             }
 
             string rawMat = dto.Matricula.Trim();
             string cleanMat = rawMat.Split('@')[0].Trim();
+            string normMat = NormalizarTexto(rawMat);
 
             DateTime horaActualMx = ObtenerHoraMexico();
 
+            // Guardar por rawMat, cleanMat y normMat
             _paseListaEnVivo[rawMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
             _paseListaEnVivo[cleanMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+            if (!string.IsNullOrEmpty(normMat))
+            {
+                _paseListaEnVivo[normMat] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+            }
+
+            // Buscar si la matrícula pertenece a un alumno conocido para guardar también por su nombre normalizado
+            try
+            {
+                var docCtrl = new DocenteController(_context);
+                var todosLosGrupos = new[] { "9IDGS-G2", "9IDGS-G1", "7MEC-G1" };
+                foreach (var g in todosLosGrupos)
+                {
+                    var alumnos = docCtrl.ObtenerAlumnosUnificados(g);
+                    var encontrado = alumnos.FirstOrDefault(a =>
+                        a.Matricula.Equals(cleanMat, StringComparison.OrdinalIgnoreCase) ||
+                        a.Matricula.Equals(rawMat, StringComparison.OrdinalIgnoreCase) ||
+                        NormalizarTexto(a.Matricula) == normMat ||
+                        NormalizarTexto(a.NombreCompleto) == normMat
+                    );
+
+                    if (encontrado != null)
+                    {
+                        string normNombreAlumno = NormalizarTexto(encontrado.NombreCompleto);
+                        if (!string.IsNullOrEmpty(normNombreAlumno))
+                        {
+                            _paseListaEnVivo[normNombreAlumno] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+                        }
+                        string cleanMatAlumno = encontrado.Matricula.Split('@')[0].Trim();
+                        _paseListaEnVivo[cleanMatAlumno] = ("PRESENTE", horaActualMx, "Ultrasonido 19.5 kHz");
+                        break;
+                    }
+                }
+            }
+            catch { }
 
             return Ok(new
             {
