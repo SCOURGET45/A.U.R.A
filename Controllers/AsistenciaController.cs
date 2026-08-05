@@ -156,27 +156,32 @@ namespace Aura.Controllers
             }
             catch { }
 
-            // 3. Nómina oficial por defecto (Solo se agregan si no fueron sustituidos por Secretaría o BD)
-            foreach (var item in grupoOficial9IDGS)
+            // 3. Nómina oficial por defecto (Solo se agregan si el grupo solicitado es 9IDGS-G2 y no fueron sustituidos por Secretaría o BD)
+            if (grupo.Equals("9IDGS-G2", StringComparison.OrdinalIgnoreCase))
             {
-                string normNom = NormalizarTexto(item.nom);
-                string matClean = item.mat.Split('@')[0].Trim();
-
-                bool matNueva = matriculasAgregadas.Add(matClean);
-                bool nomNuevo = nombresNormalizadosAgregados.Add(normNom);
-
-                if (matNueva && nomNuevo)
+                foreach (var item in grupoOficial9IDGS)
                 {
-                    listaCompleta.Add(new AlumnoMonitorDto
+                    string normNom = NormalizarTexto(item.nom);
+                    string matClean = item.mat.Split('@')[0].Trim();
+
+                    bool matNueva = matriculasAgregadas.Add(matClean);
+                    bool nomNuevo = nombresNormalizadosAgregados.Add(normNom);
+
+                    if (matNueva && nomNuevo)
                     {
-                        IdEstudiante = item.id,
-                        Matricula = matClean,
-                        NombreCompleto = item.nom,
-                        Grupo = grupo,
-                        TieneTolerancia = item.mat == "23301133" || item.mat == "23301145"
-                    });
+                        listaCompleta.Add(new AlumnoMonitorDto
+                        {
+                            IdEstudiante = item.id,
+                            Matricula = matClean,
+                            NombreCompleto = item.nom,
+                            Grupo = grupo,
+                            TieneTolerancia = item.mat == "23301133" || item.mat == "23301145"
+                        });
+                    }
                 }
             }
+
+            listaCompleta = listaCompleta.Where(a => string.Equals(a.Grupo, grupo, StringComparison.OrdinalIgnoreCase)).ToList();
 
             // Construir respuesta en vivo
             var estudiantesResult = new List<object>();
